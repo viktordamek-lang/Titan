@@ -1,8 +1,6 @@
-#karkulator 
-1 = print ("Zadej první číslo: ")
-2 = print ("Zadej druhé číslo: ")
 
-# kalkulator 
+
+# kalkulator nastaevuje funkci pro provádění základních matematických operací
 
 def kalkulacka(cislo1, cislo2, operace):
     if operace == "+":
