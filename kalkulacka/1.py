@@ -25,4 +25,3 @@ operace = input("Zadej operaci (+, -, *, /): ")
 # Zavolání funkce a výstup výsledku
 vysledek = kalkulacka(cislo1, cislo2, operace)
 print(f"Výsledek: {vysledek}")
-4 = print ("Výsledek: ")
