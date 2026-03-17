@@ -20,7 +20,7 @@ while True:
     print("10. Generator přezdívek")
     print("11. Počasí")
     volba = input("Vyber možnost (1-11): ")
-    
+     
 
     # Přidání možnosti pro povídání o náladě
     if volba == "1":
