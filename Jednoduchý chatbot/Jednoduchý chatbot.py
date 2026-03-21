@@ -1,6 +1,9 @@
 #jednoduchy chat bot 
 import random
-import string
+import string 
+import os 
+import sys 
+
 # Tento jednoduchý chatbot je navržen tak, aby poskytoval uživatelům zábavné a užitečné funkce. Můžeš si se mnou povídat o své náladě, požádat mě o pomoc s jednoduchou matematikou, převodník jednotek nebo dokonce vygenerovat náhodné heslo. Stačí si vybrat, co bys chtěl dělat, a já ti rád pomohu!
 print("Ahoj, já jsem jednoduchý chatbot. Jak se jmenuješ?")
 jmeno = input("Zadej své jméno: ")
@@ -175,3 +178,4 @@ while True:
         print("Neplatná volba. Zkus to znovu.") 
 
     
+    #prepinani mezi volba 1-11
