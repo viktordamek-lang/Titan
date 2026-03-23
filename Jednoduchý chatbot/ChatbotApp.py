@@ -69,6 +69,7 @@ class ChatbotApp:
         # Vnitřní funkce pro zpracování odpovědi na náladu
         def submit_mood():
             mood = mood_entry.get().lower()
+            # Kontrola nálady a odpovídající reakce
             if mood == "dobře":
                 messagebox.showinfo("Odpověď", "To je skvělé! Rád slyším, že se máš dobře.")
             elif mood == "špatně":
@@ -108,6 +109,7 @@ class ChatbotApp:
                 num1 = float(num1_entry.get())
                 num2 = float(num2_entry.get())
                 op = op_entry.get()
+                # Provádění operace podle zadaného operátoru
                 if op == "+":
                     result = num1 + num2
                 elif op == "-":
@@ -153,9 +155,10 @@ class ChatbotApp:
                 val = float(value_entry.get())
                 f_unit = from_unit.get()
                 t_unit = to_unit.get()
-                # Faktory převodu na metry
+                # Faktory převodu na metry pro různé jednotky
                 factors = {"m": 1, "cm": 0.01, "mm": 0.001, "km": 1000, "in": 0.0254, "ft": 0.3048, "yd": 0.9144}
                 if f_unit in factors and t_unit in factors:
+                    # Výpočet výsledku pomocí faktorů
                     result = val * factors[t_unit] / factors[f_unit]
                     messagebox.showinfo("Výsledek", f"{val} {f_unit} = {result} {t_unit}")
                 else:
@@ -182,8 +185,9 @@ class ChatbotApp:
             try:
                 length = int(length_entry.get())
                 if length > 0:
-                    # Znaky pro heslo: písmena, číslice, speciální znaky
+                    # Znaky pro heslo: velká a malá písmena, číslice, speciální znaky
                     chars = string.ascii_letters + string.digits + string.punctuation
+                    # Generování hesla náhodným výběrem znaků
                     pwd = ''.join(random.choice(chars) for _ in range(length))
                     messagebox.showinfo("Heslo", f"Vygenerované heslo: {pwd}")
                 else:
@@ -219,7 +223,7 @@ class ChatbotApp:
                 start = int(start_entry.get())
                 end = int(end_entry.get())
                 if start < end:
-                    # Náhodné číslo v zadaném rozsahu
+                    # Generování náhodného čísla v zadaném rozsahu
                     self.target = random.randint(start, end)
                     messagebox.showinfo("Začátek", f"Hádej číslo mezi {start} a {end}.")
                     self.guess_input(guess_window)
@@ -245,6 +249,7 @@ class ChatbotApp:
         def check_guess():
             try:
                 guess = int(guess_entry.get())
+                # Porovnání hádání s cílovým číslem
                 if guess < self.target:
                     messagebox.showinfo("Tip", "Příliš nízké.")
                 elif guess > self.target:
@@ -260,7 +265,7 @@ class ChatbotApp:
 
     # Metoda pro generování náhodného vtipu
     def joke_generator(self):
-        # Seznam programátorských vtipů
+        # Seznam programátorských vtipů pro výběr
         jokes = [
             "Proč programátoři nemohou řídit? Protože se bojí crashů.",
             "Jaký je rozdíl mezi programátorem a hackerem? Programátor píše kód, hacker ho zneužívá.",
@@ -273,13 +278,13 @@ class ChatbotApp:
 
     # Metoda pro zobrazení aktuálního data a času
     def show_datetime(self):
-        # Získání aktuálního data a času
+        # Získání aktuálního data a času pomocí datetime modulu
         now = datetime.datetime.now()
         messagebox.showinfo("Datum a čas", f"Aktuální: {now}")
 
     # Metoda pro zobrazení náhodného citátu dne
     def quote_of_day(self):
-        # Seznam motivujících citátů
+        # Seznam motivujících citátů pro výběr
         quotes = [
             "Život je jako jízda na kole. Abys udržel rovnováhu, musíš se pohybovat vpřed. - Albert Einstein",
             "Největší sláva není v tom, že nikdy nespadneme, ale v tom, že se vždy zvedneme. - Nelson Mandela",
@@ -292,10 +297,10 @@ class ChatbotApp:
 
     # Metoda pro generování náhodné přezdívky
     def nickname_generator(self):
-        # Seznamy pro generování přezdívek
+        # Seznamy pro generování přezdívek: adjektiva a zvířata
         names = ["Rychlý", "Tichý", "Silný", "Moudrý", "Zábavný"]
         animals = ["Lev", "Tygr", "Medvěd", "Sova", "Delfín"]
-        # Sestavení přezdívky z náhodného jména a zvířete
+        # Sestavení přezdívky z náhodného adjektiva a zvířete
         nick = random.choice(names) + " " + random.choice(animals)
         messagebox.showinfo("Přezdívka", f"Tvoje přezdívka: {nick}")
 
@@ -305,9 +310,9 @@ class ChatbotApp:
 
 # Hlavní blok pro spuštění aplikace
 if __name__ == "__main__":
-    # Vytvoření hlavního okna Tkinter
+    # Vytvoření hlavního okna Tkinter aplikace
     root = tk.Tk()
-    # Inicializace instance aplikace
+    # Inicializace instance třídy ChatbotApp
     app = ChatbotApp(root)
-    # Spuštění hlavní smyčky aplikace
+    # Spuštění hlavní smyčky aplikace pro udržení okna otevřeného
     root.mainloop()
