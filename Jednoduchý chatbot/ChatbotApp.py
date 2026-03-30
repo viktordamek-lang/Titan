@@ -11,6 +11,7 @@
 # random - pro generování náhodných čísel a výběrů
 # string - pro práci se znaky při generování hesel
 # datetime - pro získání aktuálního data a času
+import os
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -24,81 +25,82 @@ class ChatbotApp:
     def __init__(self, root):
         self.root = root  # Uložení reference na hlavní okno pro pozdější přístup
         self.root.title("Jednoduchý Chatbot")  # Nastavení titulku okna
-        self.root.geometry("400x300")  # Nastavení rozměrů: šířka 400 pixelů, výška 300 pixelů
+        self.root.geometry("800x500")  # Nastavení rozměrů: šířka 800 pixelů, výška 500 pixelů
 
         # Vytvoření hlavního štítku s uvítáním
-        # Label = statický textový prvek bez interakce (jen zobrazuje text)
-        self.label = tk.Label(root, text="Ahoj! Vyber možnost:")
-        # pack() = umísťuje widget do okna; pady = výška prázdného místa nad a pod prvkem
+        self.label = tk.Label(root, text="Ahoj! Napiš příkaz nebo zprávu:")
         self.label.pack(pady=10)
 
-        # Tlačítka pro různé funkce chatbota - každé tlačítko volá odpovídající metodu
-        # Button = interaktivní prvek; command = jaká funkce se spustí při kliknutí
-        # text = popis zobrazený na tlačítku; command = self.mood_chat = volá metodu mood_chat
-        self.button1 = tk.Button(root, text="1. Povídat si o náladě", command=self.mood_chat)
-        # pack(fill=tk.X) = rozšíří tlačítko na plnou šířku okna
-        # padx = vodorovný spacing (vlevo i vpravo), pady = svislý spacing
-        self.button1.pack(fill=tk.X, padx=20, pady=2)
+        # Hlavní rámeček pro layout chatu + boční panel
+        main_frame = tk.Frame(root)
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.button2 = tk.Button(root, text="2. Pomoc s matematikou", command=self.math_help)
-        self.button2.pack(fill=tk.X, padx=20, pady=2)
+        # Levý panel: chat
+        left_frame = tk.Frame(main_frame)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.button3 = tk.Button(root, text="3. Převodník jednotek", command=self.unit_converter)
-        self.button3.pack(fill=tk.X, padx=20, pady=2)
+        # Pravý panel: seznam všech chatů / historie
+        right_frame = tk.Frame(main_frame, width=200)
+        right_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
 
-        self.button4 = tk.Button(root, text="4. Generování náhodného hesla", command=self.generate_password)
-        self.button4.pack(fill=tk.X, padx=20, pady=2)
+        tk.Label(right_frame, text="Seznam chatů:").pack(anchor=tk.NW)
+        listbox_frame = tk.Frame(right_frame)
+        listbox_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.button5 = tk.Button(root, text="5. Konec", command=self.quit_app)
-        self.button5.pack(fill=tk.X, padx=20, pady=2)
+        self.chat_listbox = tk.Listbox(listbox_frame)
+        self.chat_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.button6 = tk.Button(root, text="6. Hádání čísla", command=self.guess_number)
-        self.button6.pack(fill=tk.X, padx=20, pady=2)
+        listbox_scrollbar = tk.Scrollbar(listbox_frame, command=self.chat_listbox.yview)
+        listbox_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.chat_listbox.configure(yscrollcommand=listbox_scrollbar.set)
+        self.chat_listbox.bind('<<ListboxSelect>>', self.select_chat)
 
-        self.button7 = tk.Button(root, text="7. Generator vtipů", command=self.joke_generator)
-        self.button7.pack(fill=tk.X, padx=20, pady=2)
+        # Přidání podpory historie příkazů pro klávesy ↑ / ↓
+        self.command_history = []
+        self.history_index = 0
 
-        self.button8 = tk.Button(root, text="8. Datum a čas", command=self.show_datetime)
-        self.button8.pack(fill=tk.X, padx=20, pady=2)
+        # Hlavní chatové okno (Text widget) s vertikálním scrollbarem
+        chat_text_frame = tk.Frame(left_frame)
+        chat_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.button9 = tk.Button(root, text="9. Citát dnešního dne", command=self.quote_of_day)
-        self.button9.pack(fill=tk.X, padx=20, pady=2)
+        self.chat_history = tk.Text(chat_text_frame, state=tk.DISABLED, wrap=tk.WORD)
+        self.chat_history.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.button10 = tk.Button(root, text="10. Generator přezdívek", command=self.nickname_generator)
-        self.button10.pack(fill=tk.X, padx=20, pady=2)
+        self.chat_scrollbar = tk.Scrollbar(chat_text_frame, command=self.chat_history.yview)
+        self.chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.chat_history.configure(yscrollcommand=self.chat_scrollbar.set)
 
-        self.button11 = tk.Button(root, text="11. Poznámkový blok", command=self.note_pad)
-        self.button11.pack(fill=tk.X, padx=20, pady=2)
+        # Vstupní pole pro chat
+        self.chat_entry = tk.Entry(left_frame)
+        self.chat_entry.pack(fill=tk.X, pady=5)
+        self.chat_entry.bind("<Return>", lambda event: self.process_chat())
+        self.chat_entry.bind("<Up>", self.navigate_history_up)
+        self.chat_entry.bind("<Down>", self.navigate_history_down)
+        self.chat_entry.bind("<Return>", lambda event: self.process_chat())
 
-        self.button12 = tk.Button(root, text="12. Převodník měn", command=self.currency_converter)
-        self.button12.pack(fill=tk.X, padx=20, pady=2)
+        button_frame = tk.Frame(left_frame)
+        button_frame.pack(pady=(0, 10))
+        tk.Button(button_frame, text="Odeslat", command=self.process_chat).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Uložit chat", command=self.save_chat).pack(side=tk.LEFT, padx=5)
 
-        self.button13 = tk.Button(root, text="13. Kalkulačka BMI", command=self.bmi_calculator)
-        self.button13.pack(fill=tk.X, padx=20, pady=2)
+        # Základní nápověda pro příkazy
+        self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
+        self.append_chat("- help, help all, help chat, clear, history, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit")
 
-        self.button14 = tk.Button(root, text="14. Kámen-nůžky-papír", command=self.rock_paper_scissors)
-        self.button14.pack(fill=tk.X, padx=20, pady=2)
+        # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
+        if os.path.exists("chat_log.txt"):
+            try:
+                with open("chat_log.txt", "r", encoding="utf-8") as f:
+                    lines = f.read().splitlines()
+                if lines:
+                    self.append_chat("Bot: Načítám poslední chat...")
+                    for line in lines:
+                        self.append_chat(line)
+            except Exception:
+                self.append_chat("Bot: Nelze načíst uložený chat; pokračujeme s prázdným chatem.")
 
-        self.button15 = tk.Button(root, text="15. Převodník teploty", command=self.temperature_converter)
-        self.button15.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button16 = tk.Button(root, text="16. Hod kostkou", command=self.roll_dice)
-        self.button16.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button17 = tk.Button(root, text="17. Kalkulačka věku", command=self.age_calculator)
-        self.button17.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button18 = tk.Button(root, text="18. Náhodný fakt", command=self.random_fact)
-        self.button18.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button19 = tk.Button(root, text="19. Počítadlo slov", command=self.word_counter)
-        self.button19.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button20 = tk.Button(root, text="20. Morseova abeceda", command=self.morse_code)
-        self.button20.pack(fill=tk.X, padx=20, pady=2)
-
-        self.button21 = tk.Button(root, text="21. Konec", command=self.quit_app)
-        self.button21.pack(fill=tk.X, padx=20, pady=2)
+        # Podpora přepnutí do převodníků a her přes chat:
+        # math, unit, pass, joke, time, quote, nick, note, currency, bmi, rps, temp, dice, age, fact, words, morse
 
     # Metoda pro povídání o náladě - otevře nové okno pro zadání nálady
     def mood_chat(self):
@@ -135,6 +137,321 @@ class ChatbotApp:
 
         # Button = tlačítko "Odeslat" se spouští submit_mood
         tk.Button(mood_window, text="Odeslat", command=submit_mood).pack(pady=10)
+
+    # Vloží text do historie chatu a scrolluje dolů
+    def append_chat(self, text):
+        self.chat_history.configure(state=tk.NORMAL)
+        self.chat_history.insert(tk.END, text + "\n")
+        self.chat_history.configure(state=tk.DISABLED)
+        self.chat_history.see(tk.END)
+
+        # Zároveň přidat do bočního seznamu všech chatů
+        if hasattr(self, 'chat_listbox'):
+            self.chat_listbox.insert(tk.END, text)
+            # Udržení posledního zobrazení
+            self.chat_listbox.see(tk.END)
+
+    def select_chat(self, event):
+        if not self.chat_listbox.curselection():
+            return
+        selected = self.chat_listbox.get(self.chat_listbox.curselection()[0])
+        if selected.startswith("Ty: "):
+            selected = selected[4:]
+        elif selected.startswith("Bot: "):
+            selected = selected[5:]
+        self.chat_entry.delete(0, tk.END)
+        self.chat_entry.insert(0, selected)
+
+    # Pohyb v historii příkazů pomocí šipek ↑ / ↓
+    def navigate_history_up(self, event):
+        if not self.command_history:
+            return "break"
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.chat_entry.delete(0, tk.END)
+            self.chat_entry.insert(0, self.command_history[self.history_index])
+        return "break"  # Zamezí defaultní chování blikání kurzoru
+
+    def navigate_history_down(self, event):
+        if not self.command_history:
+            return "break"
+        if self.history_index < len(self.command_history) - 1:
+            self.history_index += 1
+            self.chat_entry.delete(0, tk.END)
+            self.chat_entry.insert(0, self.command_history[self.history_index])
+        else:
+            self.history_index = len(self.command_history)
+            self.chat_entry.delete(0, tk.END)
+        return "break"
+
+    # Zpracovává příkazy přijaté od uživatele přes chat
+    def process_chat(self):
+        # Načteme text z input pole
+        user_text = self.chat_entry.get().strip()
+
+        # Pokud je pole prázdné, nic neděláme
+        if not user_text:
+            return
+
+        # Uložíme do historie příkazů pro navigaci šipkami
+        self.command_history.append(user_text)
+        self.history_index = len(self.command_history)
+
+        # Zobrazíme zprávu uživatele ve spodní části chatu a do historie
+        self.append_chat("Ty: " + user_text)
+
+        # Vyprázdníme vstupní pole pro další zprávu
+        self.chat_entry.delete(0, tk.END)
+
+        # Přeposlání textu do parseru příkazů a zobrazení odpovědi
+        response = self.handle_command(user_text)
+        self.append_chat("Bot: " + response)
+
+    def handle_command(self, text):
+        # Normalizujeme vstup na malá písmena pro jednodušší porovnávání
+        # Jinak by např. "Ahoj" a "ahoj" měly rozdílný výsledek.
+        t = text.lower()
+
+        # Základní nápověda: vypíše seznam příkazů včetně rozšířených variant
+        # Vrací text přímo do chatu; funkce neprovádí žádnou operaci mimo zpracování textu.
+        if t in ["help", "?", "pomoc"]:
+            return (
+                "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit"
+            )
+
+        # "help all" vysvětlí celé spektrum funkcí, ne jen rychlý cheat sheet
+        # (vše je zde zodpovězeno stručně jako textová odpověď)
+        if t in ["help all"]:
+            return (
+                "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, exit"
+            )
+
+        # "help chat" je pouze ukázka konverzačních klíčových slov
+        if t in ["help chat"]:
+            return "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, den, reverse text"
+
+        # Pokud uživatel napíše „co umíš“ (fráze v textu), dáme základní popis funkcí
+        if "co umíš" in t:
+            return "Umím spočítat, převádět, hrát hry a povídat si (příkazy: help)."
+
+        # Poděkování (jednoduchá odpověď)
+        if t in ["díky", "děkuju", "děkuji"]:
+            return "Není zač, rád pomáhám!"
+
+        # Pozdrav: pro případ, že uživatel napíše slovo pozdravu kdekoliv
+        if "ahoj" in t or "čau" in t or "nazdar" in t:
+            return "Ahoj! Jak ti mohu dnes pomoci?"
+
+        # Otázka na náladu, včetně variant bez diakritiky
+        if "jak se máš" in t or "jak se mas" in t or "máš se" in t or "mas se" in t:
+            return "Mám se dobře, děkuji za optání! Co ty?"
+
+        # Co děláš - jednoduchá konverzační věta
+        if "co děláš" in t or "co delas" in t:
+            return "Právě si povídáme. Jsem tu, abych ti pomohl s programy i klasikou."
+
+        # Počasí - statická odpověď, bez skutečného API
+        if "počasí" in t or "pocasi" in t:
+            return "Venku je hezky, ale já mám informace jen v kódu :)"
+
+        # Den - zobrazení aktuálního dne a datumu
+        if "den" in t or "dnes" in t:
+            return f"Dnes je {datetime.datetime.now():%A}, {datetime.datetime.now():%d.%m.%Y}."
+
+        # Otevřený dialog o chatu (laskavé potvrzení, že může pokračovat konverzace)
+        if "chat" in t or "povídat" in t or "povidat" in t:
+            return "Jasně, můžeme si popovídat. Napiš cokoli a já odpovím."
+
+        # Rychlé čistění chatu pomocí příkazu
+        if t in ["clear", "vymazat", "clear chat", "vymazat chat"]:
+            self.chat_history.configure(state=tk.NORMAL)
+            self.chat_history.delete("1.0", tk.END)
+            self.chat_history.configure(state=tk.DISABLED)
+            if hasattr(self, "chat_listbox"):
+                self.chat_listbox.delete(0, tk.END)
+            return "Chat byl vymazán. Pro nové příkazy napiš 'help'."
+
+        # Zobrazení posledních zadání příkazů
+        if t in ["history", "command history", "historie"]:
+            if not self.command_history:
+                return "Žádná historie příkazů zatím není."
+            recent = self.command_history[-20:]
+            return "Historie: " + ", ".join(recent)
+
+        if t in ["help chat"]:
+            return "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, den, reverse text"
+
+        if "co umíš" in t:
+            return "Umím spočítat, převádět, hrát hry a povídat si (příkazy: help)."
+
+        if t in ["díky", "děkuju", "děkuji"]:
+            return "Není zač, rád pomáhám!"
+
+        if "ahoj" in t or "čau" in t or "nazdar" in t:
+            return "Ahoj! Jak ti mohu dnes pomoci?"
+
+        if "jak se máš" in t or "jak se mas" in t or "máš se" in t or "mas se" in t:
+            return "Mám se dobře, děkuji za optání! Co ty?"
+
+        if "co děláš" in t or "co delas" in t:
+            return "Právě si povídáme. Jsem tu, abych ti pomohl s programy i klasikou."
+
+        if "počasí" in t or "pocasi" in t:
+            return "Venku je hezky, ale já mám informace jen v kódu :)"
+
+        if "den" in t or "dnes" in t:
+            return f"Dnes je {datetime.datetime.now():%A}, {datetime.datetime.now():%d.%m.%Y}."
+
+        if "chat" in t or "povídat" in t or "povidat" in t:
+            return "Jasně, můžeme si popovídat. Napiš cokoli a já odpovím."
+
+        # Reverzní příkaz: vezme text a zobrazuje ho pozpátku
+        if t.startswith("reverse "):
+            reversed_text = text[len("reverse "):]
+            return reversed_text[::-1]
+
+        # Jednoduchá kalkulačka: vyhodnocení základních operací
+        # Pozor: eval() je zde chráněn filtrem povolených znaků
+        if t.startswith("calc ") or t.startswith("math "):
+            expr = t.split(" ", 1)[1]
+            try:
+                safe = "".join(ch for ch in expr if ch in "0123456789+-*/(). ")
+                result = eval(safe)
+                return f"{expr} = {result}"
+            except Exception:
+                return "Chybný matematický výraz. Použij například: calc 3+4*2"
+
+        if t.startswith("unit "):
+            parts = t.split()
+            if len(parts) == 4:
+                try:
+                    val = float(parts[1])
+                    f = parts[2]
+                    to = parts[3]
+                    factors = {"m": 1, "cm": 0.01, "mm": 0.001, "km": 1000, "in": 0.0254, "ft": 0.3048, "yd": 0.9144}
+                    if f in factors and to in factors:
+                        res = val * factors[to] / factors[f]
+                        return f"{val} {f} = {res} {to}"
+                except ValueError:
+                    pass
+            return "Použij: unit 100 cm m"
+
+        if t.startswith("pass ") or t.startswith("password "):
+            try:
+                length = int(t.split()[1])
+                if length <= 0:
+                    return "Délka musí být kladná."
+                chars = string.ascii_letters + string.digits + string.punctuation
+                return ''.join(random.choice(chars) for _ in range(length))
+            except Exception:
+                return "Použij: pass 12"
+
+        if "joke" in t or "vtip" in t:
+            jokes = [
+                "Proč programátoři nemohou řídit? Protože se bojí crashů.",
+                "Jaký je rozdíl mezi programátorem a hackerem? Programátor píše kód, hacker ho zneužívá.",
+                "Proč se programátoři nikdy nehádají? Protože vždycky najdou společný jazyk.",
+                "Co řekl jeden programátor druhému? 'Máš nějaké bugy?'"
+            ]
+            return random.choice(jokes)
+
+        if "time" in t or "čas" in t:
+            return str(datetime.datetime.now())
+
+        if "quote" in t or "citát" in t:
+            quotes = [
+                "Život je jako jízda na kole... - Albert Einstein",
+                "Největší sláva není v tom, že nikdy nespadneme... - Nelson Mandela"
+            ]
+            return random.choice(quotes)
+
+        if "nick" in t or "přezdívka" in t:
+            names = ["Rychlý", "Tichý", "Silný", "Moudrý", "Zábavný"]
+            animals = ["Lev", "Tygr", "Medvěd", "Sova", "Delfín"]
+            return f"{random.choice(names)} {random.choice(animals)}"
+
+        if "dice" in t or "kostka" in t:
+            return f"Hodil jsi: {random.randint(1, 6)}"
+
+        if t.startswith("age "):
+            parts = t.split()
+            if len(parts) == 4:
+                try:
+                    birth_date = datetime.date(int(parts[1]), int(parts[2]), int(parts[3]))
+                    today = datetime.date.today()
+                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                    return f"Máš {age} let."
+                except Exception:
+                    pass
+            return "Použij: age 1990 12 31"
+
+        if t.startswith("bmi "):
+            parts = t.split()
+            if len(parts) == 3:
+                try:
+                    weight = float(parts[1])
+                    height = float(parts[2]) / 100.0
+                    bmi = weight / (height * height)
+                    cat = "Normální váha" if 18.5 <= bmi < 25 else "Podváha" if bmi < 18.5 else "Nadváha" if bmi < 30 else "Obezita"
+                    return f"BMI {bmi:.2f} ({cat})"
+                except Exception:
+                    pass
+            return "Použij: bmi 70 175"
+
+        if t.startswith("temp "):
+            parts = t.split()
+            if len(parts) == 4:
+                try:
+                    val = float(parts[1])
+                    f = parts[2].upper(); to = parts[3].upper()
+                    if f == "C": kelv = val + 273.15
+                    elif f == "F": kelv = (val - 32) * 5/9 + 273.15
+                    elif f == "K": kelv = val
+                    else: return "Neplatná jednotka"
+                    if to == "C": res = kelv - 273.15
+                    elif to == "F": res = (kelv - 273.15) * 9/5 + 32
+                    elif to == "K": res = kelv
+                    else: return "Neplatná jednotka"
+                    return f"{val}{f} = {res:.2f}{to}"
+                except Exception:
+                    pass
+            return "Použij: temp 100 C F"
+
+        if "fact" in t or "fakt" in t:
+            facts = [
+                "Včely mohou rozpoznat lidské tváře.",
+                "Sloni nemohou skákat.",
+                "Měsíc se vzdaluje od Země 3.8 cm za rok."
+            ]
+            return random.choice(facts)
+
+        if "words" in t or "slova" in t:
+            txt = t.replace("words", "").replace("slova", "").strip()
+            if not txt:
+                return "Napiš: words tvuj text"
+            words = len(txt.split())
+            chars = len(txt)
+            return f"Slova: {words}, Znaky: {chars}"
+
+        if "morse" in t:
+            morse_dict = {
+                'a': '.-', 'b': '-...', 'c': '-.-.', 'd': '-..', 'e': '.', 'f': '..-.',
+                'g': '--.', 'h': '....', 'i': '..', 'j': '.---', 'k': '-.-', 'l': '.-..',
+                'm': '--', 'n': '-.', 'o': '---', 'p': '.--.', 'q': '--.-', 'r': '.-.',
+                's': '...', 't': '-', 'u': '..-', 'v': '...-', 'w': '.--', 'x': '-..-',
+                'y': '-.--', 'z': '--..', '0': '-----', '1': '.----', '2': '..---',
+                '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+                '8': '---..', '9': '----.', ' ': '/'
+            }
+            return ' '.join(morse_dict.get(c, '?') for c in t if c in morse_dict or c == ' ')
+
+        if "exit" in t or "konec" in t:
+            self.root.quit()
+            return "Ukončuji aplikaci..."
+
+        return "Neznámý příkaz. Napiš 'help'."
 
     # Metoda pro pomoc s matematikou - jednoduchá kalkulačka
     def math_help(self):
@@ -264,6 +581,16 @@ class ChatbotApp:
             pass_window.destroy()  # Zavření okna po generování
 
         tk.Button(pass_window, text="Generovat", command=generate).pack(pady=10)
+
+    # Metoda pro uložení chatu do souboru
+    def save_chat(self):
+        content = self.chat_history.get("1.0", tk.END).strip()
+        if not content:
+            messagebox.showwarning("Uložit chat", "Chat je prázdný.")
+            return
+        with open("chat_log.txt", "w", encoding="utf-8") as f:
+            f.write(content)
+        messagebox.showinfo("Uložit chat", "Chat byl uložen do chat_log.txt")
 
     # Metoda pro ukončení aplikace
     def quit_app(self):

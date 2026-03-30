@@ -1,0 +1,2 @@
+Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:
+- help, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, exit
