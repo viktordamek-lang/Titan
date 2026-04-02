@@ -3,7 +3,8 @@
 # převodník jednotek, generování hesel, hádání čísel, generátor vtipů,
 # zobrazení data a času, citát dne, generátor přezdívek, poznámkový blok,
 # převodník měn, kalkulačka BMI, kámen-nůžky-papír, převodník teploty,
-# hod kostkou, kalkulačka věku, náhodný fakt, počítadlo slov a Morseova abeceda.
+# hod kostkou, kalkulačka věku, náhodný fakt, počítadlo slov, Morseova abeceda
+# a konvertor videa MOV na MP4.
 
 # Import potřebných modulů
 # tkinter - pro vytvoření grafického uživatelského rozhraní
@@ -12,8 +13,9 @@
 # string - pro práci se znaky při generování hesel
 # datetime - pro získání aktuálního data a času
 import os
+import subprocess
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import random
 import string
 import datetime
@@ -63,15 +65,19 @@ class ChatbotApp:
         chat_text_frame = tk.Frame(left_frame)
         chat_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.chat_history = tk.Text(chat_text_frame, state=tk.DISABLED, wrap=tk.WORD)
+        self.chat_history = tk.Text(chat_text_frame, state=tk.DISABLED, wrap=tk.WORD, fg="black")
         self.chat_history.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.chat_scrollbar = tk.Scrollbar(chat_text_frame, command=self.chat_history.yview)
         self.chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.chat_history.configure(yscrollcommand=self.chat_scrollbar.set)
 
+        # Nastavení barev pro text
+        self.chat_history.tag_configure("user", foreground="black", background="white")
+        self.chat_history.tag_configure("bot", foreground="black", background="white")
+
         # Vstupní pole pro chat
-        self.chat_entry = tk.Entry(left_frame)
+        self.chat_entry = tk.Entry(left_frame, bg="white", fg="green")
         self.chat_entry.pack(fill=tk.X, pady=5)
         self.chat_entry.bind("<Return>", lambda event: self.process_chat())
         self.chat_entry.bind("<Up>", self.navigate_history_up)
@@ -141,7 +147,12 @@ class ChatbotApp:
     # Vloží text do historie chatu a scrolluje dolů
     def append_chat(self, text):
         self.chat_history.configure(state=tk.NORMAL)
-        self.chat_history.insert(tk.END, text + "\n")
+        # Určení tagu podle toho, zda je to uživatel nebo bot
+        if text.startswith("Ty:"):
+            tag = "user"
+        else:
+            tag = "bot"
+        self.chat_history.insert(tk.END, text + "\n", tag)
         self.chat_history.configure(state=tk.DISABLED)
         self.chat_history.see(tk.END)
 
@@ -217,7 +228,7 @@ class ChatbotApp:
         if t in ["help", "?", "pomoc"]:
             return (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, exit"
             )
 
         # "help all" vysvětlí celé spektrum funkcí, ne jen rychlý cheat sheet
@@ -225,7 +236,7 @@ class ChatbotApp:
         if t in ["help all"]:
             return (
                 "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
-                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, exit"
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), exit"
             )
 
         # "help chat" je pouze ukázka konverzačních klíčových slov
@@ -446,6 +457,10 @@ class ChatbotApp:
                 '8': '---..', '9': '----.', ' ': '/'
             }
             return ' '.join(morse_dict.get(c, '?') for c in t if c in morse_dict or c == ' ')
+
+        if "video" in t or "convert" in t:
+            self.video_converter()
+            return "Otevírám konvertor videa..."
 
         if "exit" in t or "konec" in t:
             self.root.quit()
@@ -1049,6 +1064,106 @@ class ChatbotApp:
             messagebox.showinfo("Morseův kód", result)
 
         tk.Button(morse_window, text="Převést na Morseův kód", command=to_morse).pack(pady=10)
+
+    # Metoda pro konvertor videa (MOV na MP4)
+    def video_converter(self):
+        # Vytvoření nového okna (Toplevel) pro konvertor videa
+        video_window = tk.Toplevel(self.root)
+        video_window.title("Konvertor videa MOV -> MP4")
+        video_window.geometry("500x150")
+
+        # Proměnné pro cesty k souborům
+        input_var = tk.StringVar()
+        output_var = tk.StringVar()
+
+        # První řádek: Label, Entry a Button pro vstupní soubor
+        tk.Label(video_window, text="Vstupní MOV:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        tk.Entry(video_window, textvariable=input_var, width=40).grid(row=0, column=1, padx=5, pady=5)
+        tk.Button(video_window, text="Vybrat...", command=lambda: self.browse_input(input_var, output_var)).grid(row=0, column=2, padx=5, pady=5)
+
+        # Druhý řádek: Label, Entry a Button pro výstupní soubor
+        tk.Label(video_window, text="Výstupní MP4:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        tk.Entry(video_window, textvariable=output_var, width=40).grid(row=1, column=1, padx=5, pady=5)
+        tk.Button(video_window, text="Uložit jako...", command=lambda: self.browse_output(output_var)).grid(row=1, column=2, padx=5, pady=5)
+
+        # Třetí řádek: Tlačítko pro spuštění konverze
+        tk.Button(video_window, text="Konvertovat", command=lambda: self.start_conversion(input_var, output_var)).grid(row=2, column=0, columnspan=3, pady=10)
+
+    # Pomocná metoda pro výběr vstupního souboru
+    def browse_input(self, input_var, output_var):
+        path = filedialog.askopenfilename(
+            title="Vyber MOV soubor",
+            filetypes=[("MOV soubory", "*.mov"), ("Vše", "*.*")]
+        )
+        if path:
+            input_var.set(path)
+            # Automaticky nastavit výstup, pokud není zadán
+            if not output_var.get():
+                output_var.set(os.path.splitext(path)[0] + ".mp4")
+
+    # Pomocná metoda pro výběr výstupního souboru
+    def browse_output(self, output_var):
+        path = filedialog.asksaveasfilename(
+            title="Uložit jako MP4",
+            defaultextension=".mp4",
+            filetypes=[("MP4 soubory", "*.mp4"), ("Vše", "*.*")]
+        )
+        if path:
+            output_var.set(path)
+
+    # Pomocná metoda pro spuštění konverze
+    def start_conversion(self, input_var, output_var):
+        # Kontrola FFmpeg
+        if not self.check_ffmpeg():
+            messagebox.showerror("Chyba", "FFmpeg není nainstalován nebo není v PATH.")
+            return
+
+        input_file = input_var.get().strip()
+        output_file = output_var.get().strip()
+
+        if not input_file or not output_file:
+            messagebox.showwarning("Chyba", "Vyber vstupní i výstupní soubor.")
+            return
+
+        if not os.path.isfile(input_file):
+            messagebox.showerror("Chyba", "Neplatný vstupní soubor.")
+            return
+
+        ok, msg = self.convert_mov_to_mp4(input_file, output_file)
+        if ok:
+            messagebox.showinfo("Hotovo", msg)
+        else:
+            messagebox.showerror("Chyba", msg)
+
+    # Pomocná metoda pro kontrolu FFmpeg
+    def check_ffmpeg(self):
+        try:
+            subprocess.run(
+                ["ffmpeg", "-version"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
+
+    # Pomocná metoda pro konverzi MOV na MP4
+    def convert_mov_to_mp4(self, input_file, output_file):
+        try:
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i", input_file,
+                "-c:v", "libx264",
+                "-c:a", "aac",
+                output_file,
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return True, f"Konverze dokončena: {output_file}"
+        except subprocess.CalledProcessError as e:
+            err = e.stderr.decode("utf-8", errors="ignore")
+            return False, "Chyba při konverzi:\n" + err
 
     # Metoda pro ukončení aplikace
     def quit_app(self):

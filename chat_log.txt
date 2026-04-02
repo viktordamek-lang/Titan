@@ -1,2 +1,5 @@
 Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:
+- help, help all, help chat, clear, history, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit
+Bot: Načítám poslední chat...
+Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:
 - help, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, exit
