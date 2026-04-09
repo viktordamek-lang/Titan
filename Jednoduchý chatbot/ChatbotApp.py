@@ -20,6 +20,10 @@ from tkinter import messagebox, filedialog
 import random
 import string
 import datetime
+import webbrowser
+import urllib.parse
+import urllib.request
+# webbrowser, urllib.parse a urllib.request umožňují otevřít prohlížeč a načítat data z webu
 
 # Třída pro hlavní aplikaci chatbota
 class ChatbotApp:
@@ -102,12 +106,16 @@ class ChatbotApp:
         tk.Button(quick_buttons, text="Převod", command=self.unit_converter).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Video", command=self.video_converter).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Poznámky", command=self.note_pad).pack(side=tk.LEFT, padx=2, pady=2)
+        # Nové funkce pro webovou integraci: počasí a webové hledání
+        # Tlačítka otevřou dodatečná okna nebo přímo prohlížeč.
+        tk.Button(quick_buttons, text="Počasí", command=self.open_weather_window).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="Vyhledat", command=self.open_search_window).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Calc historie", command=self.display_calc_history).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Chat mode", command=self.chat_mode).pack(side=tk.LEFT, padx=2, pady=2)
 
         # Základní nápověda pro příkazy
         self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
-        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit")
+        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit")
 
         # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
         if os.path.exists("chat_log.txt"):
@@ -233,10 +241,13 @@ class ChatbotApp:
         self.chat_entry.delete(0, tk.END)
 
         # Přeposlání textu do parseru příkazů a zobrazení odpovědi
+        # Metoda handle_command rozhoduje, zda se jedná o chat, kalkulačku, webové hledání nebo jiný příkaz.
         response = self.handle_command(user_text)
         self.append_chat("Bot: " + response)
 
     def safe_eval_math(self, expr):
+        # Bezpečně vyhodnotí matematický výraz pomocí AST
+        # Tento přístup zamezí spuštění nebezpečného kódu.
         expression = ast.parse(expr, mode="eval")
         allowed_nodes = (
             ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant, ast.Num,
@@ -278,6 +289,7 @@ class ChatbotApp:
 
     def chat_mode(self):
         # Otevře okno pro konverzační režim podobný ChatGPT
+        # V tomto režimu může uživatel zadávat otázky a dostane jednoduchou odpověď.
         chat_window = tk.Toplevel(self.root)
         chat_window.title("Chat Mode - AI-like odpovědi")
         chat_window.geometry("600x400")
@@ -318,6 +330,72 @@ class ChatbotApp:
         # Výchozí odpověď
         return "To je zajímavá otázka! Bohužel jsem jen jednoduchý chatbot, takže nemám plnou AI inteligenci jako ChatGPT. Zkus napsat něco jiného nebo použij příkazy jako 'help'."
 
+    def open_web_search(self, query):
+        # Sestaví URL pro Google vyhledávání a otevře ji ve výchozím prohlížeči.
+        # urllib.parse.quote() zajistí správné kódování českých a speciálních znaků.
+        # Tato metoda pouze spouští externí prohlížeč, nevrací data přímo do aplikace.
+        try:
+            url = "https://www.google.com/search?q=" + urllib.parse.quote(query)
+            webbrowser.open(url)
+            return True
+        except Exception:
+            return False
+
+    def open_search_window(self):
+        # Otevře malé okno pro zadání hledaného výrazu.
+        # Po kliknutí na tlačítko se provede vyhledání v prohlížeči.
+        search_window = tk.Toplevel(self.root)
+        search_window.title("Webové vyhledávání")
+        search_window.geometry("400x120")
+
+        tk.Label(search_window, text="Hledat: ").pack(pady=5)
+        query_entry = tk.Entry(search_window, width=40)
+        query_entry.pack(padx=10)
+
+        def search():
+            query = query_entry.get().strip()
+            if not query:
+                messagebox.showwarning("Hledat", "Zadej, co chceš vyhledat.")
+                return
+            if self.open_web_search(query):
+                search_window.destroy()
+            else:
+                messagebox.showerror("Hledat", "Nepodařilo se otevřít vyhledávání.")
+
+        tk.Button(search_window, text="Hledat", command=search).pack(pady=10)
+
+    def get_weather(self, city):
+        # Načte počasí z veřejné služby wttr.in.
+        # wttr.in je volně dostupná služba, která vrátí krátký text o počasí bez API klíče.
+        try:
+            query = urllib.parse.quote(city)
+            url = f"http://wttr.in/{query}?format=3&lang=cs"
+            with urllib.request.urlopen(url, timeout=10) as response:
+                return response.read().decode("utf-8")
+        except Exception:
+            return "Nelze načíst počasí. Zkontroluj připojení k internetu nebo zkus jiný místní název."
+
+    def open_weather_window(self):
+        # Vytvoří jednoduché dialogové okno pro zadání města a zobrazení počasí.
+        weather_window = tk.Toplevel(self.root)
+        weather_window.title("Počasí")
+        weather_window.geometry("400x120")
+
+        tk.Label(weather_window, text="Město nebo lokalita:").pack(pady=5)
+        city_entry = tk.Entry(weather_window, width=40)
+        city_entry.pack(padx=10)
+
+        def show_weather():
+            city = city_entry.get().strip()
+            if not city:
+                messagebox.showwarning("Počasí", "Zadej název města nebo lokality.")
+                return
+            result = self.get_weather(city)
+            messagebox.showinfo("Počasí", result)
+            weather_window.destroy()
+
+        tk.Button(weather_window, text="Zjistit počasí", command=show_weather).pack(pady=10)
+
     def handle_command(self, text):
         t = text.strip().lower()
         if not t:
@@ -326,21 +404,21 @@ class ChatbotApp:
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
             ),
             "?": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
             ),
             "pomoc": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
             ),
             "help all": lambda: (
                 "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
-                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), historie kalkulačky (calc history), AI-like chat (ask), exit"
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), exit"
             ),
-            "help chat": lambda: "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, den, reverse text",
+            "help chat": lambda: "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, search [text], weather [místo], ask [otázka]",
             "děkuji": lambda: "Není zač, rád pomáhám!",
             "děkuju": lambda: "Není zač, rád pomáhám!",
             "díky": lambda: "Není zač, rád pomáhám!",
@@ -369,22 +447,35 @@ class ChatbotApp:
         if any(token in t for token in ["co děláš", "co delas"]):
             return "Právě si povídáme. Jsem tu, abych ti pomohl s programy i klasikou."
 
-        if any(token in t for token in ["počasí", "pocasi"]):
+        if t in ["počasí", "pocasi"]:
             return "Venku je hezky, ale já mám informace jen v kódu :)"
 
         if any(token in t for token in ["den", "dnes"]):
             return f"Dnes je {datetime.datetime.now():%A}, {datetime.datetime.now():%d.%m.%Y}."
 
-        if any(token in t for token in ["chat", "povídat", "povidat"]):
+        if any(token in t for token in ["povídat", "povidat"]) or t == "chat":
             return "Jasně, můžeme si popovídat. Napiš cokoli a já odpovím."
 
         if t.startswith("reverse "):
             reversed_text = text[len("reverse "):]
             return reversed_text[::-1]
 
+        # Chatový režim: použijeme jednoduché AI-like odpovědi založené na klíčových slovech
         if t.startswith("ask ") or t.startswith("chat "):
             question = text.split(" ", 1)[1]
             return self.generate_ai_response(question)
+
+        # Počasí lze vyžádat příkazem weather nebo českou variantou počasí/pocasi
+        if t.startswith("weather ") or t.startswith("počasí ") or t.startswith("pocasi "):
+            location = text.split(" ", 1)[1]
+            # Získání dat z wttr.in bez potřeby API klíče
+            return self.get_weather(location)
+
+        # Webové vyhledávání otevře Google s dotazem v prohlížeči
+        if t.startswith("search "):
+            query = text.split(" ", 1)[1]
+            self.open_web_search(query)
+            return f"Otevírám vyhledávání pro: {query}"
 
         if t.startswith("calc ") or t.startswith("math "):
             expr = text.split(" ", 1)[1]
