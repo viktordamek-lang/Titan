@@ -111,11 +111,12 @@ class ChatbotApp:
         tk.Button(quick_buttons, text="Počasí", command=self.open_weather_window).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Vyhledat", command=self.open_search_window).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Calc historie", command=self.display_calc_history).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Chat mode", command=self.chat_mode).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="TTT", command=self.tic_tac_toe).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="Recept", command=self.recipe_generator).pack(side=tk.LEFT, padx=2, pady=2)
 
         # Základní nápověda pro příkazy
         self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
-        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, exit")
+        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, tictactoe, recipe, exit")
 
         # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
         if os.path.exists("chat_log.txt"):
@@ -404,7 +405,7 @@ class ChatbotApp:
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, exit"
             ),
             "?": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
@@ -416,7 +417,7 @@ class ChatbotApp:
             ),
             "help all": lambda: (
                 "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
-                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), exit"
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), Tic-Tac-Toe (tictactoe), generátor receptů (recipe), exit"
             ),
             "help chat": lambda: "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, search [text], weather [místo], ask [otázka]",
             "děkuji": lambda: "Není zač, rád pomáhám!",
@@ -627,6 +628,13 @@ class ChatbotApp:
         if "video" in t or "convert" in t:
             self.video_converter()
             return "Otevírám konvertor videa..."
+
+        if "tictactoe" in t or "ttt" in t:
+            self.tic_tac_toe()
+            return "Otevírám Tic-Tac-Toe..."
+
+        if "recipe" in t or "recept" in t:
+            return self.recipe_generator()
 
         if "exit" in t or "konec" in t or "quit" in t:
             self.root.quit()
@@ -1336,6 +1344,110 @@ class ChatbotApp:
         except subprocess.CalledProcessError as e:
             err = e.stderr.decode("utf-8", errors="ignore")
             return False, "Chyba při konverzi:\n" + err
+
+    # Metoda pro hru Tic-Tac-Toe
+    def tic_tac_toe(self):
+        # Vytvoření nového okna pro hru Tic-Tac-Toe
+        ttt_window = tk.Toplevel(self.root)
+        ttt_window.title("Tic-Tac-Toe")
+        ttt_window.geometry("300x350")
+
+        # Inicializace herní desky (3x3)
+        self.board = [['' for _ in range(3)] for _ in range(3)]
+        self.current_player = 'X'  # Začíná hráč X
+
+        # Label pro zobrazení aktuálního hráče
+        self.player_label = tk.Label(ttt_window, text="Hráč: X", font=('Arial', 16))
+        self.player_label.pack(pady=10)
+
+        # Rámeček pro tlačítka
+        button_frame = tk.Frame(ttt_window)
+        button_frame.pack()
+
+        # Vytvoření 3x3 mřížky tlačítek
+        self.buttons = []
+        for i in range(3):
+            row = []
+            for j in range(3):
+                btn = tk.Button(button_frame, text='', font=('Arial', 20), width=5, height=2,
+                                command=lambda r=i, c=j: self.make_move(r, c, ttt_window))
+                btn.grid(row=i, column=j, padx=5, pady=5)
+                row.append(btn)
+            self.buttons.append(row)
+
+        # Tlačítko pro restart hry
+        tk.Button(ttt_window, text="Nová hra", command=lambda: self.reset_game(ttt_window)).pack(pady=10)
+
+    # Metoda pro provedení tahu
+    def make_move(self, row, col, window):
+        if self.board[row][col] == '' and not self.check_winner():
+            self.board[row][col] = self.current_player
+            self.buttons[row][col].config(text=self.current_player)
+
+            if self.check_winner():
+                messagebox.showinfo("Konec hry", f"Hráč {self.current_player} vyhrál!")
+                self.disable_buttons()
+            elif self.is_draw():
+                messagebox.showinfo("Konec hry", "Remíza!")
+                self.disable_buttons()
+            else:
+                self.current_player = 'O' if self.current_player == 'X' else 'X'
+                self.player_label.config(text=f"Hráč: {self.current_player}")
+
+    # Metoda pro kontrolu vítěze
+    def check_winner(self):
+        # Kontrola řádků, sloupců a diagonál
+        for i in range(3):
+            if self.board[i][0] == self.board[i][1] == self.board[i][2] != '':
+                return True
+            if self.board[0][i] == self.board[1][i] == self.board[2][i] != '':
+                return True
+        if self.board[0][0] == self.board[1][1] == self.board[2][2] != '':
+            return True
+        if self.board[0][2] == self.board[1][1] == self.board[2][0] != '':
+            return True
+        return False
+
+    # Metoda pro kontrolu remízy
+    def is_draw(self):
+        for row in self.board:
+            if '' in row:
+                return False
+        return True
+
+    # Metoda pro zakázání tlačítek po konci hry
+    def disable_buttons(self):
+        for row in self.buttons:
+            for btn in row:
+                btn.config(state=tk.DISABLED)
+
+    # Metoda pro reset hry
+    def reset_game(self, window):
+        self.board = [['' for _ in range(3)] for _ in range(3)]
+        self.current_player = 'X'
+        self.player_label.config(text="Hráč: X")
+        for i in range(3):
+            for j in range(3):
+                self.buttons[i][j].config(text='', state=tk.NORMAL)
+
+    # Metoda pro generátor náhodných receptů
+    def recipe_generator(self):
+        # Seznamy pro náhodný výběr
+        mains = ["kuřecí maso", "hovězí maso", "vepřové maso", "ryby", "tofu", "cizrna", "špagety", "rýže", "brambory"]
+        sides = ["špenát", "mrkev", "cibule", "česnek", "rajčata", "paprika", "zelenina", "salát", "kukuřice"]
+        seasonings = ["sůl", "pepř", "oregano", "bazalka", "kurkuma", "paprika", "tymián", "kmín"]
+        methods = ["pečte v troubě při 180°C po dobu 30 minut", "vařte na páře 20 minut", "smažte na olivovém oleji 15 minut", "duchte pod pokličkou 25 minut", "grilujte 10 minut z každé strany"]
+
+        # Náhodný výběr
+        main = random.choice(mains)
+        side = random.choice(sides)
+        seasoning = random.choice(seasonings)
+        method = random.choice(methods)
+
+        # Sestavení receptu
+        recipe = f"Náhodný recept:\n\nHlavní ingredience: {main}\nPříloha: {side}\nKoření: {seasoning}\nZpůsob přípravy: {method}\n\nBon appétit!"
+        messagebox.showinfo("Náhodný recept", recipe)
+        return recipe
 
     # Metoda pro ukončení aplikace
     def quit_app(self):
