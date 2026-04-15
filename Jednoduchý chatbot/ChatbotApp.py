@@ -106,6 +106,9 @@ class ChatbotApp:
         tk.Button(quick_buttons, text="Převod", command=self.unit_converter).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Video", command=self.video_converter).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Poznámky", command=self.note_pad).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="Nálada", command=self.mood_chat).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="Matika", command=self.math_help).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="Citát", command=self.quote_of_day).pack(side=tk.LEFT, padx=2, pady=2)
         # Nové funkce pro webovou integraci: počasí a webové hledání
         # Tlačítka otevřou dodatečná okna nebo přímo prohlížeč.
         tk.Button(quick_buttons, text="Počasí", command=self.open_weather_window).pack(side=tk.LEFT, padx=2, pady=2)
@@ -116,7 +119,7 @@ class ChatbotApp:
 
         # Základní nápověda pro příkazy
         self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
-        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, tictactoe, recipe, exit")
+        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, tictactoe, recipe, mood, math, exit")
 
         # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
         if os.path.exists("chat_log.txt"):
@@ -245,6 +248,12 @@ class ChatbotApp:
         # Metoda handle_command rozhoduje, zda se jedná o chat, kalkulačku, webové hledání nebo jiný příkaz.
         response = self.handle_command(user_text)
         self.append_chat("Bot: " + response)
+
+    def _has(self, text, *keys):
+        return any(key in text for key in keys)
+
+    def _starts(self, text, *prefixes):
+        return any(text.startswith(prefix) for prefix in prefixes)
 
     def safe_eval_math(self, expr):
         # Bezpečně vyhodnotí matematický výraz pomocí AST
@@ -405,7 +414,7 @@ class ChatbotApp:
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, mood, math, exit"
             ),
             "?": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
@@ -417,7 +426,7 @@ class ChatbotApp:
             ),
             "help all": lambda: (
                 "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
-                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), Tic-Tac-Toe (tictactoe), generátor receptů (recipe), exit"
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), Tic-Tac-Toe (tictactoe), generátor receptů (recipe), nálada (mood), matematika (math), exit"
             ),
             "help chat": lambda: "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, search [text], weather [místo], ask [otázka]",
             "děkuji": lambda: "Není zač, rád pomáhám!",
@@ -436,45 +445,51 @@ class ChatbotApp:
         if t in simple_responses:
             return simple_responses[t]()
 
-        if "co umíš" in t:
+        if self._has(t, "co umíš", "co umis", "umíš"):
             return "Umím spočítat, převádět, hrát hry a povídat si (příkazy: help)."
 
-        if any(token in t for token in ["ahoj", "čau", "nazdar"]):
+        if self._has(t, "ahoj", "čau", "nazdar", "zdar"):
             return "Ahoj! Jak ti mohu dnes pomoci?"
 
-        if any(token in t for token in ["jak se máš", "jak se mas", "máš se", "mas se"]):
+        if self._has(t, "jak se máš", "jak se mas", "máš se", "mas se"):
             return "Mám se dobře, děkuji za optání! Co ty?"
 
-        if any(token in t for token in ["co děláš", "co delas"]):
+        if self._has(t, "co děláš", "co delas", "co dělas"):
             return "Právě si povídáme. Jsem tu, abych ti pomohl s programy i klasikou."
 
         if t in ["počasí", "pocasi"]:
-            return "Venku je hezky, ale já mám informace jen v kódu :)"
+            return "Napiš 'weather [místo]' nebo 'počasí [místo]' pro aktuální předpověď."
 
-        if any(token in t for token in ["den", "dnes"]):
+        if self._has(t, "den", "dnes", "datum"):
             return f"Dnes je {datetime.datetime.now():%A}, {datetime.datetime.now():%d.%m.%Y}."
 
-        if any(token in t for token in ["povídat", "povidat"]) or t == "chat":
+        if self._has(t, "povídat", "povidat") or t == "chat":
             return "Jasně, můžeme si popovídat. Napiš cokoli a já odpovím."
 
-        if t.startswith("reverse "):
-            reversed_text = text[len("reverse "):]
-            return reversed_text[::-1]
+        if t in ["mood", "mood chat", "nálada", "nalada"]:
+            self.mood_chat()
+            return "Otevírám dialog o náladě..."
+
+        if t in ["math", "matika", "matematika"]:
+            self.math_help()
+            return "Otevírám pomoc s matematikou..."
+
+        if t in ["quote", "citát", "citat"]:
+            return self.get_random_quote()
 
         # Chatový režim: použijeme jednoduché AI-like odpovědi založené na klíčových slovech
-        if t.startswith("ask ") or t.startswith("chat "):
-            question = text.split(" ", 1)[1]
+        if self._starts(t, "ask ") or self._starts(t, "chat "):
+            question = original_text.split(" ", 1)[1]
             return self.generate_ai_response(question)
 
         # Počasí lze vyžádat příkazem weather nebo českou variantou počasí/pocasi
-        if t.startswith("weather ") or t.startswith("počasí ") or t.startswith("pocasi "):
-            location = text.split(" ", 1)[1]
-            # Získání dat z wttr.in bez potřeby API klíče
+        if self._starts(t, "weather ", "počasí ", "pocasi "):
+            location = original_text.split(" ", 1)[1]
             return self.get_weather(location)
 
         # Webové vyhledávání otevře Google s dotazem v prohlížeči
-        if t.startswith("search "):
-            query = text.split(" ", 1)[1]
+        if self._starts(t, "search ", "vyhledat "):
+            query = original_text.split(" ", 1)[1]
             self.open_web_search(query)
             return f"Otevírám vyhledávání pro: {query}"
 
@@ -876,10 +891,8 @@ class ChatbotApp:
         now = datetime.datetime.now()
         messagebox.showinfo("Datum a čas", f"Aktuální: {now}")
 
-    # Metoda pro zobrazení náhodného citátu dne
-    def quote_of_day(self):
-        # Seznam motivujících citátů pro inspiraci
-        # Každý citát je řetězec (string) s motivujícím příkazem
+    # Metoda pro získání náhodného citátu
+    def get_random_quote(self):
         quotes = [
             "Život je jako jízda na kole. Abys udržel rovnováhu, musíš se pohybovat vpřed. - Albert Einstein",
             "Největší sláva není v tom, že nikdy nespadneme, ale v tom, že se vždy zvedneme. - Nelson Mandela",
@@ -887,8 +900,12 @@ class ChatbotApp:
             "Nejlepší způsob, jak předpovědět budoucnost, je ji vytvořit. - Peter Drucker",
             "Život je 10% toho, co se nám stane, a 90% toho, jak na to reagujeme. - Charles R. Swindoll"
         ]
-        # random.choice(quotes) = vybere náhodně jeden citát ze seznamu
-        messagebox.showinfo("Citát", random.choice(quotes))
+        return random.choice(quotes)
+
+    # Metoda pro zobrazení náhodného citátu dne
+    def quote_of_day(self):
+        quote = self.get_random_quote()
+        messagebox.showinfo("Citát", quote)
 
     # Metoda pro generování náhodné přezdívky
     def nickname_generator(self):
