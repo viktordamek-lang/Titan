@@ -1,0 +1,11 @@
+import re
+text = "regularni vyrazy jsou fajn a nemam je radsi nez klasicke stringy"
+regex_slova = r'\b\w+'
+vsechna_slova = re.findall(regex_slova, text)
+print(vsechna_slova) 
+regex_mezery = r'\x20+'
+vsechny_mezery = re.findall(regex_mezery, text)
+print(f"pocet mezer: {len(vsechny_mezery)}") 
+regex_slova_mezery = r'\b\w+\x20+'
+vsechna_slova_mezery = re.findall(regex_slova_mezery, text)
+print(vsechna_slova_mezery)
