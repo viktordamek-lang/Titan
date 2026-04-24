@@ -172,60 +172,99 @@ class ChatbotApp:
         # Button = tlačítko "Odeslat" se spouští submit_mood
         tk.Button(mood_window, text="Odeslat", command=submit_mood).pack(pady=10)
 
-    # Vloží text do historie chatu a scrolluje dolů
+    # Vloží text do historie chatu a scrolluje dolů automaticky
+    # Také přidá text do bočního seznamu (listbox) pro snadný přístup
+    # Tagy "user" a "bot" umožňují různé vizuální styly pro každého (barva, font atd.)
     def append_chat(self, text):
+        # Umožníme zápis do chatu (je normálně zablokovaný pro ochranu)
         self.chat_history.configure(state=tk.NORMAL)
-        # Určení tagu podle toho, zda je to uživatel nebo bot
+        # Určení tagu (stylizace) podle toho, zda je to uživatel nebo bot
+        # Tag "user" = černý text na bílém pozadí; "bot" = také černý na bílém
         if text.startswith("Ty:"):
             tag = "user"
         else:
             tag = "bot"
+        # Vložíme text na konec (tk.END) s daným tagem; "\n" = nový řádek
         self.chat_history.insert(tk.END, text + "\n", tag)
+        # Zablokujeme textové pole znovu (jen čtení)
         self.chat_history.configure(state=tk.DISABLED)
+        # self.chat_history.see(tk.END) = automaticky scrolluje na poslední zprávu
+        # (uživatel vždy vidí nejnovější zprávu bez ručního scrollování)
         self.chat_history.see(tk.END)
 
-        # Zároveň přidat do bočního seznamu všech chatů
+        # Zároveň přidat do bočního seznamu všech chatů (historický listbox)
         if hasattr(self, 'chat_listbox'):
+            # hasattr = "má tato instance atribut 'chat_listbox'?" (kontrola existence)
             self.chat_listbox.insert(tk.END, text)
-            # Udržení posledního zobrazení
+            # Udržení posledního zobrazení (show end item)
+            # Listbox se automaticky scrolluje na poslední položku
             self.chat_listbox.see(tk.END)
 
     def select_chat(self, event):
         # Pokud uživatel zvolí položku z historie chatu, vložíme ji zpět do vstupního pole.
         # Tím lze snadno znovu odeslat nebo upravit dřívější zprávu.
+        # curselection() vrátí n-tici s indexy vybraných prvků; pokud není nic vybráno, vrátí ()
         if not self.chat_listbox.curselection():
+            # Pokud nic není vybráno, opustíme metodu
             return
+        # Získáme vybraný text z listboxu: curselection()[0] = index prvního vybraného prvku
         selected = self.chat_listbox.get(self.chat_listbox.curselection()[0])
+        # Odstraníme prefix "Ty: " (prvních 4 znaky) nebo "Bot: " (prvních 5 znaků)
+        # aby vstupní pole obsahovalo jen samotný příkaz/zprávu
         if selected.startswith("Ty: "):
+            # Slicing [4:] = vezmi všechno od 4. znaku dál (přeskočiš "Ty: ")
             selected = selected[4:]
         elif selected.startswith("Bot: "):
+            # Slicing [5:] = vezmi všechno od 5. znaku dál (přeskočiš "Bot: ")
             selected = selected[5:]
+        # Vymažeme vstupní pole a vložíme vybraný text
         self.chat_entry.delete(0, tk.END)
         self.chat_entry.insert(0, selected)
 
-    # Pohyb v historii příkazů pomocí šipek ↑ / ↓
+    # Pohyb v historii příkazů pomocí klávesy ↑ (nahoru)
+    # Stisknutí ↑ zobrazí předchozí příkaz ze historie
     def navigate_history_up(self, event):
+        # Pokud je historie prázdná, nic neděláme
         if not self.command_history:
             return "break"
+        # Zkontrolujeme, zda nejsme na začátku historie
+        # self.history_index > 0 = zatím jsme se nevrátili na úplný začátek
         if self.history_index > 0:
+            # Snížíme index (jdeme o jeden příkaz zpět v historii)
             self.history_index -= 1
+            # Vymažeme vstupní pole (delete(0, tk.END) = smaž všechno)
             self.chat_entry.delete(0, tk.END)
+            # Vložíme starší příkaz ze command_history
             self.chat_entry.insert(0, self.command_history[self.history_index])
-        return "break"  # Zamezí defaultní chování blikání kurzoru
+        # "break" = zastavit další zpracování klávesy (zamezí defaultnímu chování blikání kurzoru)
+        return "break"
 
+    # Pohyb v historii příkazů pomocí klávesy ↓ (dolů)
+    # Stisknutí ↓ zobrazí příští (novější) příkaz ze historie
     def navigate_history_down(self, event):
+        # Pokud je historie prázdná, nic neděláme
         if not self.command_history:
             return "break"
+        # Zkontrolujeme, zda nejsme na konci historie (nejnovějším příkazu)
+        # len(...) - 1 = index posledního prvku
         if self.history_index < len(self.command_history) - 1:
+            # Zvýšíme index (jdeme o jeden příkaz dopředu v historii)
             self.history_index += 1
+            # Vymažeme vstupní pole
             self.chat_entry.delete(0, tk.END)
+            # Vložíme novější příkaz ze command_history
             self.chat_entry.insert(0, self.command_history[self.history_index])
         else:
+            # Pokud jsme už na konci nebo přesáhli konec, resetujeme na prázdný pole
+            # self.history_index = len(...) = ukazatel na "jednu pozici za posledním prvkem"
             self.history_index = len(self.command_history)
+            # Vymaž vstupní pole pro nový příkaz
             self.chat_entry.delete(0, tk.END)
         return "break"
 
     # Zpracovává příkazy přijaté od uživatele přes chat
+    # PROCES: 1. Přečte vstup -> 2. Ověří, zda není prázdný -> 3. Uloží do historie -> 4. Zobrazí uživatelovu zprávu
+    #         5. Vymaže vstupní pole -> 6. Pošle do handle_command -> 7. Zobrazí odpověď
     def process_chat(self):
         # Načteme text z input pole
         user_text = self.chat_entry.get().strip()
@@ -234,7 +273,7 @@ class ChatbotApp:
         if not user_text:
             return
 
-        # Uložíme do historie příkazů pro navigaci šipkami
+        # Uložíme do historie příkazů pro navigaci šipkami (klávesy ↑/↓)
         self.command_history.append(user_text)
         self.history_index = len(self.command_history)
 
@@ -249,43 +288,73 @@ class ChatbotApp:
         response = self.handle_command(user_text)
         self.append_chat("Bot: " + response)
 
+    # Pomocná metoda pro kontrolu, zda text obsahuje některý ze zadaných klíčů
+    # Vrací True/False; používá se pro rozpoznávání příkazů v chatovém textu
+    # Příklad: self._has("jak se máš", "jak se", "co u tebe") vrátí True
     def _has(self, text, *keys):
         return any(key in text for key in keys)
 
+    # Pomocná metoda pro kontrolu, zda text začíná některým ze zadaných prefixů
+    # Vrací True/False; používá se pro příkazy, které vyžadují argumenty (např. "calc 2+2")
+    # Příklad: self._starts("calc 5*3", "calc ", "math ") vrátí True
     def _starts(self, text, *prefixes):
         return any(text.startswith(prefix) for prefix in prefixes)
 
+    # Bezpečně vyhodnotí matematický výraz pomocí AST (Abstract Syntax Tree)
+    # BEZPEČNOST: Zabraňuje spuštění nebezpečného kódu tím, že:
+    #            1. Parsuje výraz na AST (stromová struktura, ne spustitelný kód)
+    #            2. Ověřuje, že obsahuje jen bezpečné operace (sčítání, násobení atd.)
+    #            3. Zakazuje volání funkcí (ast.Call) a access k built-in modulům
+    #            4. Vyhodnocuje s prázdným prostředím {{"__builtins__": None}}
+    # PŘÍKLAD: "2+3*4" -> OK; "__import__('os').system()" -> ODMÍTNUTO
     def safe_eval_math(self, expr):
-        # Bezpečně vyhodnotí matematický výraz pomocí AST
-        # Tento přístup zamezí spuštění nebezpečného kódu.
+        # Parsování textu na AST - nejedná se o spuštění, jen analýza
         expression = ast.parse(expr, mode="eval")
+        # Seznam povolených typů uzlů: binární operace (+,-,*,/), unární (-+), konstanty
         allowed_nodes = (
             ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant, ast.Num,
             ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
             ast.UAdd, ast.USub, ast.FloorDiv, ast.LShift, ast.RShift,
             ast.Load,
         )
+        # Procházení všech uzlů v AST stromu - ověření bezpečnosti
         for node in ast.walk(expression):
+            # Zastavit jakékoliv volání funkcí (např. open(), exec(), etc.)
             if isinstance(node, ast.Call):
                 raise ValueError("Nepovolený výraz")
+            # Zastavit nekanonické konstanty (např. stringy, které by mohly obsahovat kód)
             if isinstance(node, ast.Constant) and not isinstance(node.value, (int, float, complex)):
                 raise ValueError("Nepovolený výraz")
+            # Zastavit jakékoliv jiné nepovolené operace
             if not isinstance(node, allowed_nodes):
                 raise ValueError("Nepovolený výraz")
+        # Vyhodnocení bezpečného výrazu s vypnutými built-in funkcemi
         return eval(compile(expression, "<string>", "eval"), {"__builtins__": None}, {})
 
+    # Metoda pro vymazání celého chatu
+    # Vymaže obsah textového pole chatu a také listbox s historií
     def clear_chat(self):
+        # Umožní zápis do textového pole (je normálně DISABLED pro ochranu)
         self.chat_history.configure(state=tk.NORMAL)
+        # Smazání všeho obsahu: "1.0" = prvn řádek, znak 0 (začátek); tk.END = konec dokumentu
         self.chat_history.delete("1.0", tk.END)
+        # Zase zablokování textového pole (jen čtení, uživatel nemůže editovat)
         self.chat_history.configure(state=tk.DISABLED)
+        # Pokud existuje listbox s historií (boční panel), smazat i ten
         if hasattr(self, "chat_listbox"):
             self.chat_listbox.delete(0, tk.END)
+        # Vrácení potvrzovací zprávy uživateli
         return "Chat byl vymazán. Pro nové příkazy napiš 'help'."
 
+    # Metoda pro zobrazení posledních 20 příkazů z historie
     def show_history(self):
+        # Pokud uživatel ještě nic nezadal, vrátit varovnou zprávu
         if not self.command_history:
             return "Žádná historie příkazů zatím není."
+        # Vezmeme posledních 20 příkazů (command_history[-20:] = poslední 20 prvků)
+        # [-20:] = list slicing: od pozice -20 (20. prvek od konce) do konce
         recent = self.command_history[-20:]
+        # Spojíme příkazy do jednoho řetězce oddělené čárkou
         return "Historie příkazů: " + ", ".join(recent)
 
     def show_calc_history(self):
@@ -406,11 +475,23 @@ class ChatbotApp:
 
         tk.Button(weather_window, text="Zjistit počasí", command=show_weather).pack(pady=10)
 
+    # Hlavní parser příkazů - analyzuje uživatelský vstup a vrátí odpověď
+    # Strategie: 1. Normalizuje text (malá písmena) -> 2. Hledá přesné shody v slovníku
+    #            3. Hledá příkazy s argumenty (např. "calc ...") -> 4. Vracejí text nebo vyvolávají okna
     def handle_command(self, text):
+        # Normalizace textu na malá písmena a odebrání mezer na začátku/konci (jednodušší porovnání)
         t = text.strip().lower()
         if not t:
             return ""
 
+        # Slovník jednoduchých odpovědí na přesné příkazy
+        # Klíče jsou příkazy (lowercase); hodnoty jsou lambda funkce (anonymní funkce)
+        # Proč lambda? Protože některé hodnoty potřebují volat funkce (clear_chat(), show_history())
+        # Bez lambda by se funkce zavolaly hned při vytváření slovníku, ne až během hledání odpovědi
+        # Příklady:
+        # - "help": lambda: (...) => vrátí seznam příkazů
+        # - "clear": lambda: self.clear_chat() => zavolá clear_chat() pouze když je "clear" zadán
+        # - "díky": lambda: "Není zač..." => vrátí statický text
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
@@ -442,6 +523,7 @@ class ChatbotApp:
             "calc history": lambda: self.show_calc_history(),
         }
 
+        # Pokud je zadaný text v simple_responses, zavoláme odpovídající lambda funkci: lambda()
         if t in simple_responses:
             return simple_responses[t]()
 
@@ -1363,88 +1445,135 @@ class ChatbotApp:
             return False, "Chyba při konverzi:\n" + err
 
     # Metoda pro hru Tic-Tac-Toe
+    # Metoda pro spuštění hry Tic-Tac-Toe (Piškvorky)
+    # Vytvoří GUI s 3x3 mřížkou tlačítek a inicializuje herní logiqu
     def tic_tac_toe(self):
         # Vytvoření nového okna pro hru Tic-Tac-Toe
         ttt_window = tk.Toplevel(self.root)
         ttt_window.title("Tic-Tac-Toe")
         ttt_window.geometry("300x350")
 
-        # Inicializace herní desky (3x3)
+        # Inicializace herní desky (3x3 mřížka)
+        # [['', '', ''],  <- řádek 0
+        #  ['', '', ''],  <- řádek 1
+        #  ['', '', '']]  <- řádek 2
+        # '' = prázdné pole; 'X' nebo 'O' = obsazené pole
         self.board = [['' for _ in range(3)] for _ in range(3)]
-        self.current_player = 'X'  # Začíná hráč X
+        # Určení, kdo začíná (X vždy začíná)
+        self.current_player = 'X'
 
         # Label pro zobrazení aktuálního hráče
+        # Font=('Arial', 16) = font Arial o velikosti 16 pixelů
         self.player_label = tk.Label(ttt_window, text="Hráč: X", font=('Arial', 16))
         self.player_label.pack(pady=10)
 
-        # Rámeček pro tlačítka
+        # Rámeček pro tlačítka - slučuje všechna tlačítka do jednoho prvku
         button_frame = tk.Frame(ttt_window)
         button_frame.pack()
 
-        # Vytvoření 3x3 mřížky tlačítek
+        # Vytvoření 3x3 mřížky tlačítek (9 tlačítek celkem)
+        # Vnější smyčka (i) = řádky (0, 1, 2)
+        # Vnitřní smyčka (j) = sloupce (0, 1, 2)
+        # Každý button má:
+        # - command=lambda r=i, c=j: self.make_move(r, c, ttt_window)
+        #   Důvod lambda: v cyklu se proměnné i a j mění; lambda zachytí jejich aktuální hodnotu
+        # - grid(row=i, column=j) = umístí button na pozici (i, j) v mřížce
         self.buttons = []
         for i in range(3):
             row = []
             for j in range(3):
+                # Vytvoření tlačítka s prázdným textem (zobrazí 'X' nebo 'O' po kliknutí)
                 btn = tk.Button(button_frame, text='', font=('Arial', 20), width=5, height=2,
                                 command=lambda r=i, c=j: self.make_move(r, c, ttt_window))
+                # grid = layout manažer pro umísťování widgetů do mřížky
                 btn.grid(row=i, column=j, padx=5, pady=5)
                 row.append(btn)
             self.buttons.append(row)
 
-        # Tlačítko pro restart hry
+        # Tlačítko pro restart hry - umožní začít novou hru bez zavírání okna
         tk.Button(ttt_window, text="Nová hra", command=lambda: self.reset_game(ttt_window)).pack(pady=10)
 
-    # Metoda pro provedení tahu
+    # Metoda pro provedení tahu hráče v Tic-Tac-Toe
+    # Kontroluje: 1. Zda je políčko prázdné -> 2. Zda hra již neskončila
+    #             3. Zaznamená tah -> 4. Ověří výhru/remízu -> 5. Změní hráče
     def make_move(self, row, col, window):
+        # Kontrola: políčko je prázdné ('' = neobsazené) a hra ještě neskončila
         if self.board[row][col] == '' and not self.check_winner():
+            # Zaznamená tah do herní desky (row, col) s aktuálním hráčem (X nebo O)
             self.board[row][col] = self.current_player
+            # Aktualizuje tlačítko na GUI - zobrazí X nebo O
             self.buttons[row][col].config(text=self.current_player)
 
+            # Ověření výsledku tahu: výhra, remíza, nebo pokračování hry
             if self.check_winner():
+                # Hráč vyhrál - zobrazit zprávu a deaktivovat tlačítka (hra skončila)
                 messagebox.showinfo("Konec hry", f"Hráč {self.current_player} vyhrál!")
                 self.disable_buttons()
             elif self.is_draw():
+                # Všechna políčka obsazena bez vítěze = remíza
                 messagebox.showinfo("Konec hry", "Remíza!")
                 self.disable_buttons()
             else:
+                # Hra pokračuje - přepnutí na dalšího hráče
+                # Ternární operátor: pokud je X, změní na O; jinak na X
                 self.current_player = 'O' if self.current_player == 'X' else 'X'
                 self.player_label.config(text=f"Hráč: {self.current_player}")
 
-    # Metoda pro kontrolu vítěze
+    # Metoda pro kontrolu vítěze v Tic-Tac-Toe
+    # Vrací True pokud je na desce tři stejné symboly v řadě (řádek, sloupec nebo diagonála)
+    # Kombinace testů: 3 řádky + 3 sloupce + 2 diagonály = 8 možných výher
     def check_winner(self):
-        # Kontrola řádků, sloupců a diagonál
+        # Kontrola řádků (i-tý řádek: board[i][0], board[i][1], board[i][2])
         for i in range(3):
+            # Ternární srovnání: všechny tři prvky musí být stejné a ne prázdné ('' = prázdné pole)
             if self.board[i][0] == self.board[i][1] == self.board[i][2] != '':
-                return True
+                return True  # Řádek je vyplněn jedním hráčem
+            # Kontrola sloupců (i-tý sloupec: board[0][i], board[1][i], board[2][i])
             if self.board[0][i] == self.board[1][i] == self.board[2][i] != '':
-                return True
+                return True  # Sloupec je vyplněn jedním hráčem
+        # Kontrola hlavní diagonály (levý horní -> pravý dolní)
         if self.board[0][0] == self.board[1][1] == self.board[2][2] != '':
             return True
+        # Kontrola vedlejší diagonály (pravý horní -> levý dolní)
         if self.board[0][2] == self.board[1][1] == self.board[2][0] != '':
             return True
+        # Pokud žádná podmínka neukazuje na výhru, vítěz dosud není
         return False
 
     # Metoda pro kontrolu remízy
+    # Metoda pro kontrolu remízy v Tic-Tac-Toe
+    # Vrací True pokud jsou všechna políčka obsazena bez zjištěného vítěze (=remíza)
     def is_draw(self):
+        # Prochází všechny řádky herní desky
         for row in self.board:
+            # Pokud najde alespoň jedno prázdné políčko (''), hra ještě pokračuje, není remíza
             if '' in row:
                 return False
+        # Pokud žádné prázdné políčko nenajde, jsou všechna políčka obsazena = remíza
         return True
 
     # Metoda pro zakázání tlačítek po konci hry
+    # Zabraňuje dalším tahům a zmrazí desku v konečném stavu
     def disable_buttons(self):
+        # Procházíme všechny řádky a sloupce 3x3 desky
         for row in self.buttons:
             for btn in row:
+                # Nastavujeme stav tlačítka na DISABLED = uživatel nemůže klikat
                 btn.config(state=tk.DISABLED)
 
-    # Metoda pro reset hry
+    # Metoda pro reset/restartování hry Tic-Tac-Toe
+    # Vrátí hru do počátečního stavu a vymaže desku
     def reset_game(self, window):
+        # Resetování herní desky - všechna políčka na ''
         self.board = [['' for _ in range(3)] for _ in range(3)]
+        # Vrácení na prvního hráče (X)
         self.current_player = 'X'
+        # Aktualizace labelu na obrazovce
         self.player_label.config(text="Hráč: X")
+        # Vymazání textu na všech tlačítcích a umožnění klikání (state=tk.NORMAL)
         for i in range(3):
             for j in range(3):
+                # text='' = vymaž obsah; state=tk.NORMAL = aktivuj tlačítko (było DISABLED po konci hry)
                 self.buttons[i][j].config(text='', state=tk.NORMAL)
 
     # Metoda pro generátor náhodných receptů
