@@ -6,6 +6,47 @@
 # hod kostkou, kalkulačka věku, náhodný fakt, počítadlo slov, Morseova abeceda
 # a konvertor videa MOV na MP4.
 
+# ====== PŘEHLED HLAVNÍCH FUNKCÍ ======
+# 🎮 HRY:
+#   - tic_tac_toe() → Hra Piškvorky (3x3 mřížka, 2 hráči)
+#   - rock_paper_scissors() → Kámen-nůžky-papír proti počítači
+#   - guess_number() → Hádaní čísla (uživatel hádá число v rozsahu)
+#
+# 🧮 KALKULAČKY:
+#   - bmi_calculator() → Výpočet Body Mass Index (váha vs výška)
+#   - unit_converter() → Převod délkových jednotek (m, cm, km, in, ft, yd)
+#   - temperature_converter() → Převod teploty (°C, °F, K)
+#   - currency_converter() → Převod měn (CZK na EUR, USD, GBP)
+#   - math_help() → Kalkulačka na 4 základní operace (+, -, *, /)
+#   - generate_password() → Generování bezpečného hesla
+#
+# ℹ️ INFORMACE:
+#   - joke_generator() → Náhodný výběr z vtipů
+#   - get_random_quote() → Náhodný motivační citát
+#   - random_fact() → Zajímavý vědecký fakt
+#   - show_datetime() → Aktuální datum a čas
+#   - age_calculator() → Výpočet věku z data narození
+#
+# 📝 TEXTOVÉ NÁSTROJE:
+#   - note_pad() → Poznámkový blok se ukládáním
+#   - word_counter() → Počítadlo slov, znaků a řádků
+#   - morse_code() → Převod textu do Morseovy abecedy
+#
+# 📊 WEBOVÉ FUNKCE:
+#   - open_weather_window() → Zjištění počasí pro město (api wttr.in)
+#   - open_search_window() → Vyhledání v prohlížeči (Google)
+#
+# 🎥 MULTIMÉDIA:
+#   - video_converter() → Konverze videa MOV na MP4 (vyžaduje FFmpeg)
+#
+# 🎲 GENERÁTORY:
+#   - nickname_generator() → Vygenerování náhodné přezdívky
+#   - recipe_generator() → Vygenerování náhodného receptu
+#
+# ⚙️ NASTAVENÍ:
+#   - open_settings() → Uživatelská nastavení (tema, font, jazyk)
+#   - apply_theme() → Aplikace vybraného tématu (tmavý/světlý režim)
+
 # Import potřebných modulů
 # tkinter - pro vytvoření grafického uživatelského rozhraní
 # messagebox - pro zobrazování dialogových oken s informacemi/chybami
@@ -68,6 +109,19 @@ class ChatbotApp:
         # Historie výsledků kalkulačky
         self.calc_history = []
 
+        # ====== UŽIVATELSKÁ NASTAVENÍ ======
+        # Výchozí hodnoty: tmavý režim, velikost fontu, barva pozadí, jazyk
+        self.settings = {
+            "dark_mode": False,           # False = světlý režim, True = tmavý režim
+            "font_size": 10,              # Velikost fontu v pixelech (defaultně 10)
+            "language": "CZ",             # "CZ" = čeština, "EN" = angličtina
+            "bg_color": "white",          # Barva pozadí chatu
+            "fg_color": "black",          # Barva textu
+            "auto_save": True,            # Automatické ukládání chatu
+            "notifications": True,        # Povolení notifikací
+            "font_family": "Arial"        # Font pro display
+        }
+
         # Hlavní chatové okno (Text widget) s vertikálním scrollbarem
         chat_text_frame = tk.Frame(left_frame)
         chat_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -116,10 +170,12 @@ class ChatbotApp:
         tk.Button(quick_buttons, text="Calc historie", command=self.display_calc_history).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="TTT", command=self.tic_tac_toe).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Recept", command=self.recipe_generator).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="⚙️ Nastavení", command=self.open_settings).pack(side=tk.LEFT, padx=2, pady=2)
 
         # Základní nápověda pro příkazy
         self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
         self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, tictactoe, recipe, mood, math, exit")
+        self.append_chat("📚 Detailní průvodce všech funkcí najdeš v souboru: FUNKCNI_PRUVODCE.md")
 
         # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
         if os.path.exists("chat_log.txt"):
@@ -171,6 +227,104 @@ class ChatbotApp:
 
         # Button = tlačítko "Odeslat" se spouští submit_mood
         tk.Button(mood_window, text="Odeslat", command=submit_mood).pack(pady=10)
+
+    # ====== UŽIVATELSKÁ NASTAVENÍ ======
+    # Metoda pro otevření okna s nastavením vzhledu a chování aplikace
+    def open_settings(self):
+        # Vytvoření nového okna (Toplevel) pro uživatelská nastavení
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("⚙️ Nastavení aplikace")
+        settings_window.geometry("400x350")
+
+        tk.Label(settings_window, text="UŽIVATELSKÁ NASTAVENÍ", font=("Arial", 14, "bold")).pack(pady=10)
+        
+        # ===== SEKCE 1: VZHLED =====
+        tk.Label(settings_window, text="📊 VZHLED:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=15)
+        
+        # Jazyk
+        tk.Label(settings_window, text="Jazyk:").pack(anchor=tk.W, padx=30)
+        lang_var = tk.StringVar(value=self.settings["language"])
+        tk.OptionMenu(settings_window, lang_var, "CZ", "EN").pack(anchor=tk.W, padx=40)
+        
+        # Velikost fontu
+        tk.Label(settings_window, text="Velikost fontu:").pack(anchor=tk.W, padx=30)
+        font_frame = tk.Frame(settings_window)
+        font_frame.pack(anchor=tk.W, padx=40)
+        font_size_scale = tk.Scale(font_frame, from_=8, to=16, orient=tk.HORIZONTAL, 
+                                   length=150, label="px")
+        font_size_scale.set(self.settings["font_size"])
+        font_size_scale.pack(side=tk.LEFT)
+        
+        # Tmavý režim
+        tk.Label(settings_window, text="Vzhled:").pack(anchor=tk.W, padx=30)
+        theme_var = tk.StringVar(value="Světlý" if not self.settings["dark_mode"] else "Tmavý")
+        tk.OptionMenu(settings_window, theme_var, "Světlý", "Tmavý").pack(anchor=tk.W, padx=40)
+        
+        # ===== SEKCE 2: CHOVÁNÍ =====
+        tk.Label(settings_window, text="⚡ CHOVÁNÍ:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=15, pady=(10,0))
+        
+        # Automatické ukládání
+        auto_save_var = tk.BooleanVar(value=self.settings["auto_save"])
+        tk.Checkbutton(settings_window, text="Automatické ukládání chatu", 
+                      variable=auto_save_var).pack(anchor=tk.W, padx=30)
+        
+        # Notifikace
+        notif_var = tk.BooleanVar(value=self.settings["notifications"])
+        tk.Checkbutton(settings_window, text="Povolit notifikace", 
+                      variable=notif_var).pack(anchor=tk.W, padx=30)
+        
+        # ===== TLAČÍTKA =====
+        button_frame = tk.Frame(settings_window)
+        button_frame.pack(pady=15)
+        
+        # Tlačítko Uložit
+        def save_settings():
+            self.settings["language"] = lang_var.get()
+            self.settings["font_size"] = font_size_scale.get()
+            self.settings["dark_mode"] = (theme_var.get() == "Tmavý")
+            self.settings["auto_save"] = auto_save_var.get()
+            self.settings["notifications"] = notif_var.get()
+            
+            # Aplikuj změny vzhledu
+            self.apply_theme()
+            
+            messagebox.showinfo("Nastavení", "Nastavení bylo uloženo! 🎉")
+            settings_window.destroy()
+        
+        # Tlačítko Zrušit
+        def cancel_settings():
+            settings_window.destroy()
+        
+        tk.Button(button_frame, text="💾 Uložit", command=save_settings, bg="green", fg="white").pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="❌ Zrušit", command=cancel_settings, bg="red", fg="white").pack(side=tk.LEFT, padx=5)
+        
+        # Informační text
+        info_text = "Změny se aplikují po kliknutí na 'Uložit'.\nNěkteré změny mohou vyžadovat restart aplikace."
+        tk.Label(settings_window, text=info_text, font=("Arial", 9), fg="gray").pack(pady=10)
+    
+    # Metoda pro aplikaci vybraného tématu (tmavý/světlý režim)
+    # Změní barvy pozadí a textu v celé aplikaci podle nastavení
+    def apply_theme(self):
+        # Pokud je aktivní tmavý režim, nastav tmavé barvy, jinak světlé
+        if self.settings["dark_mode"]:
+            # Tmavý režim: tmavé pozadí + světlý text
+            self.settings["bg_color"] = "#2b2b2b"  # Tmavě šedá
+            self.settings["fg_color"] = "#ffffff"  # Bílá
+            bg = "#2b2b2b"
+            fg = "#ffffff"
+        else:
+            # Světlý režim: bílé pozadí + tmavý text
+            self.settings["bg_color"] = "white"    # Bílá
+            self.settings["fg_color"] = "black"    # Černá
+            bg = "white"
+            fg = "black"
+        
+        # Aplikuj barvy na hlavní chat window
+        self.chat_history.config(bg=bg, fg=fg, font=(self.settings["font_family"], self.settings["font_size"]))
+        
+        # Pokud je auto_save zapnuto, ulož chat
+        if self.settings["auto_save"]:
+            self.save_chat()
 
     # Vloží text do historie chatu a scrolluje dolů automaticky
     # Také přidá text do bočního seznamu (listbox) pro snadný přístup
@@ -262,9 +416,9 @@ class ChatbotApp:
             self.chat_entry.delete(0, tk.END)
         return "break"
 
-    # Zpracovává příkazy přijaté od uživatele přes chat
-    # PROCES: 1. Přečte vstup -> 2. Ověří, zda není prázdný -> 3. Uloží do historie -> 4. Zobrazí uživatelovu zprávu
-    #         5. Vymaže vstupní pole -> 6. Pošle do handle_command -> 7. Zobrazí odpověď
+    # ====== CHAT & HISTORIE ======
+    # Metoda pro zpracování uživatelského vstupu z chat pole
+    # Zpracovává příkazy a odpovídá vhodnou zprávou nebo akcí
     def process_chat(self):
         # Načteme text z input pole
         user_text = self.chat_entry.get().strip()
