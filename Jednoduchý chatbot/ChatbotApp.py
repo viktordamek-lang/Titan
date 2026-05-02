@@ -10,7 +10,8 @@
 # 🎮 HRY:
 #   - tic_tac_toe() → Hra Piškvorky (3x3 mřížka, 2 hráči)
 #   - rock_paper_scissors() → Kámen-nůžky-papír proti počítači
-#   - guess_number() → Hádaní čísla (uživatel hádá число v rozsahu)
+#   - guess_number() → Hádaní čísla (uživatel hádá číslo v rozsahu)
+#   - coin_flip_game() → Hra Nula Nebo Jedničky (50/50 šance, odhad)
 #
 # 🧮 KALKULAČKY:
 #   - bmi_calculator() → Výpočet Body Mass Index (váha vs výška)
@@ -171,6 +172,7 @@ class ChatbotApp:
         tk.Button(quick_buttons, text="TTT", command=self.tic_tac_toe).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="Recept", command=self.recipe_generator).pack(side=tk.LEFT, padx=2, pady=2)
         tk.Button(quick_buttons, text="⚙️ Nastavení", command=self.open_settings).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Button(quick_buttons, text="🎰 0/1", command=self.coin_flip_game).pack(side=tk.LEFT, padx=2, pady=2)
 
         # Základní nápověda pro příkazy
         self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
@@ -649,19 +651,19 @@ class ChatbotApp:
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, mood, math, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, coin, mood, math, exit"
             ),
             "?": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, coin, exit"
             ),
             "pomoc": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
-                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, exit"
+                "time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, video, weather, search, calc history, ask, tictactoe, recipe, coin, exit"
             ),
             "help all": lambda: (
                 "Funkce: kalkulačka (calc), převody jednotek (unit), generování hesla (pass), vtipy (joke), "
-                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), Tic-Tac-Toe (tictactoe), generátor receptů (recipe), nálada (mood), matematika (math), exit"
+                "čas (time), citát (quote), nick (nick), BMI (bmi), kostka (dice), věk (age), fact, words, morse, reverse, konvertor videa (video), počasí (weather), hledání webu (search), historie kalkulačky (calc history), AI-like chat (ask), Tic-Tac-Toe (tictactoe), generátor receptů (recipe), hra 0/1 (coin), nálada (mood), matematika (math), exit"
             ),
             "help chat": lambda: "Zkuste: ahoj, jak se máš, co umíš, děkuji, co děláš, počasí, search [text], weather [místo], ask [otázka]",
             "děkuji": lambda: "Není zač, rád pomáhám!",
@@ -880,17 +882,34 @@ class ChatbotApp:
             self.video_converter()
             return "Otevírám konvertor videa..."
 
+        # Příkaz pro spuštění hry Tic-Tac-Toe (Piškvorky)
+        # Dvě hráči: X a O si střídavě klikají na políčka
+        # Vítěz = ten, kdo první dosáhne tří symbolů v řadě
         if "tictactoe" in t or "ttt" in t:
             self.tic_tac_toe()
             return "Otevírám Tic-Tac-Toe..."
 
+        # Příkaz pro generování náhodného receptu
+        # Kombinuje náhodné ingredience, přílohy, koření a způsoby přípravy
+        # Výstup: Doporučará každý recept se zdrojovými ingrediencemi
         if "recipe" in t or "recept" in t:
             return self.recipe_generator()
+
+        # Příkaz pro hru Nula Nebo Jedničky (0/1) - hra na osud
+        # Hráč si volí 0 nebo 1, počítač si vybere náhodně stejně
+        # Pokud se volby shodují = VÝHRA! 🎉 (50% šance na výhru)
+        # Pokud se liší = PROHRA 😢 (50% šance na prohru)
+        # Podporované klíčové slova: "coin", "01", "0/1", "nula", "flip"
+        if "01" in t or "coin" in t or "0/1" in t or "nula" in t or "flip" in t:
+            self.coin_flip_game()
+            return "Otevírám hru Nula Jedna... 🎰"
 
         if "exit" in t or "konec" in t or "quit" in t:
             self.root.quit()
             return "Ukončuji aplikaci..."
 
+        # Výchozí případ: pokud žádný příkaz nebyl rozpoznán, nabídni pomoc
+        # Uživateli se doporučuje zadat "help" pro seznam všech dostupných příkazů
         return "Neznámý příkaz. Napiš 'help'."
 
     # Metoda pro pomoc s matematikou - jednoduchá kalkulačka
@@ -1748,6 +1767,61 @@ class ChatbotApp:
         recipe = f"Náhodný recept:\n\nHlavní ingredience: {main}\nPříloha: {side}\nKoření: {seasoning}\nZpůsob přípravy: {method}\n\nBon appétit!"
         messagebox.showinfo("Náhodný recept", recipe)
         return recipe
+
+    # ====== HRA 0/1 (NULA JEDNA) ======
+    # Jednoduchá hra na osud: hráč volí 0 nebo 1, počítač si vybere náhodně
+    # Pokud správně uhodneš, vítězíš! 50/50 šance na výhru
+    def coin_flip_game(self):
+        # Vytvoření nového okna (Toplevel) pro hru 0/1
+        game_window = tk.Toplevel(self.root)
+        game_window.title("🎰 Hra Nula Jedna")
+        game_window.geometry("350x200")
+
+        # Popis hry a instrukce
+        tk.Label(game_window, text="🎰 NULA NEBO JEDNA?", font=("Arial", 14, "bold")).pack(pady=10)
+        tk.Label(game_window, text="Vyber nulu (0) nebo jedničku (1).\nPočítač si vybere náhodně.\nJsou stejné? Vítězíš! 🎉", 
+                font=("Arial", 11), justify=tk.CENTER).pack(pady=5)
+
+        # Proměnná pro uložení skutečné volby počítače
+        self.computer_choice = None
+
+        # Vnitřní funkce pro logiku hry
+        def play(choice):
+            # Počítač si vybere náhodně (0 nebo 1)
+            self.computer_choice = random.choice([0, 1])
+            # Konverze volby na číslo (string → int)
+            user_choice = int(choice)
+
+            # Vyhodnocení výsledku
+            if user_choice == self.computer_choice:
+                # Správní odhad - uživatel vyhrál! 🎉
+                result = f"🎉 VYHRÁL JSI! 🎉\n\nTy: {user_choice}\nPočítač: {self.computer_choice}\n✅ Jsou stejné!"
+                title = "Vítězství!"
+            else:
+                # Špatný odhad - uživatel prohrál 😢
+                result = f"😢 Ops, prohráls!\n\nTy: {user_choice}\nPočítač: {self.computer_choice}\n❌ Nejsou stejné!"
+                title = "Porážka!"
+
+            # Zobrazení výsledku v dialogu
+            messagebox.showinfo(title, result)
+            game_window.destroy()  # Zavření okna po skončení hry
+
+        # Tlačítka pro výběr - hráč si klika na 0 nebo 1
+        # lambda je potřeba pro předání parametru (0 nebo 1) do funkce play()
+        button_frame = tk.Frame(game_window)
+        button_frame.pack(pady=20)
+
+        tk.Button(button_frame, text="0️⃣ NULA", command=lambda: play(0), 
+                 bg="#FF6B6B", fg="white", font=("Arial", 12, "bold"), 
+                 width=12, height=2).pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(button_frame, text="1️⃣ JEDIČKA", command=lambda: play(1), 
+                 bg="#4ECDC4", fg="white", font=("Arial", 12, "bold"), 
+                 width=12, height=2).pack(side=tk.LEFT, padx=10)
+
+        # Informace o šancích
+        tk.Label(game_window, text="Šance na výhru: 50% | Šance na prohru: 50%", 
+                font=("Arial", 9), fg="gray").pack(pady=10)
 
     # Metoda pro ukončení aplikace
     def quit_app(self):

@@ -16,6 +16,13 @@
 - **Příkaz:** `guess` nebo `hádej`
 - **Co dělá?** Počítač si myslí číslo v zadaném rozsahu, ty ho hádáš. Program ti řekne, zda je příliš nízké/vysoké
 
+### 🎰 Hra Nula Nebo Jedničky
+- **Tlačítko:** "🎰 0/1"
+- **Příkaz:** `coin`, `01`, `0/1` nebo `nula`
+- **Co dělá?** Jednoduchá hra na osud: ty si vybeřeš 0 nebo 1, počítač si vybere náhodně. Pokud jsou stejné, **vítězíš!** 🎉
+- **Šance:** 50% na výhru, 50% na prohru
+- **Jak je to snadné?** Klikni na tlačítko "0️⃣ NULA" nebo "1️⃣ JEDIČKA" a nech osud rozhodnout!
+
 ---
 
 ## 🧮 KALKULAČKY
@@ -252,11 +259,11 @@ python3 ChatbotApp.py
 help, help all, help chat, ahoj, jak se máš, co umíš, děkuji,
 calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp,
 dice, age, fact, words, morse, reverse, video, weather, search,
-calc history, ask, tictactoe, recipe, mood, math,
+calc history, ask, tictactoe, recipe, coin, mood, math,
 clear, history, exit
 ```
 
 ---
 
-**Poslední aktualizace:** 25. dubna 2026
-**Verze:** 2.0 (s nastavením a komentáři)
+**Poslední aktualizace:** 30. dubna 2026
+**Verze:** 2.1 (přidána hra Nula Jedničky 🎰)
