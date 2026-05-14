@@ -48,151 +48,232 @@
 #   - open_settings() → Uživatelská nastavení (tema, font, jazyk)
 #   - apply_theme() → Aplikace vybraného tématu (tmavý/světlý režim)
 
-# Import potřebných modulů
-# tkinter - pro vytvoření grafického uživatelského rozhraní
-# messagebox - pro zobrazování dialogových oken s informacemi/chybami
-# random - pro generování náhodných čísel a výběrů
-# string - pro práci se znaky při generování hesel
-# datetime - pro získání aktuálního data a času
-import os
-import subprocess
-import ast
-import tkinter as tk
-from tkinter import messagebox, filedialog
-import random
-import string
-import datetime
-import webbrowser
-import urllib.parse
-import urllib.request
-# webbrowser, urllib.parse a urllib.request umožňují otevřít prohlížeč a načítat data z webu
+# ============================================================
+# IMPORT MODULŮ - Všechny potřebné knihovny pro aplikaci
+# ============================================================
+# === GUI KNIHOVNY ===
+import tkinter as tk                   # Tkinter - GUI framework (okna, tlačítka, textová pole)
+from tkinter import messagebox         # Dialogy (informace, chyby, potvrzení)
+from tkinter import filedialog         # Dialogy pro výběr souborů a složek
 
-# Třída pro hlavní aplikaci chatbota
+# === INTERNÍ MODULY ===
+import os                              # Práce se soubory a cestami (os.path, os.remove...)
+import subprocess                      # Spouštění externích příkazů (FFmpeg pro konverzi videa)
+import ast                             # Abstract Syntax Tree - analýza Python kódu (bezpečná matematika)
+
+# === DATA & ČÍSLA ===
+import random                          # Generování náhodných čísel a výběrů z seznamů
+import string                          # Předdefinované stringy (ascii_letters, digits, punctuation)
+import datetime                        # Datum, čas a kalendář (datetime.datetime.now(), timedelta)
+
+# === WEB & INTERNET ===
+import webbrowser                      # Otevírání webových stránek ve výchozím prohlížeči
+import urllib.parse                    # Formátování URL (quote) pro českého znaky bez chyb
+import urllib.request                  # Načítání dat z internetu (HTTP požadavky)
+
+# ============================================================
+# CHATBOT APLIKACE - Třída pro správu GUI a logiky
+# ============================================================
+# Popis: Hlavní třída obsahující:
+#   - GUI (okna, tlačítka, textová pole)
+#   - Logiku chatbota (rozpoznávání příkazů, odpovědi)
+#   - Praktické nástroje (kalkulačky, hry, generátory)
+#   - Nastavení a konfiguraci
+# ============================================================
 class ChatbotApp:
-    # Inicializační metoda pro nastavení hlavního okna a tlačítek
-    # Parametr 'self' = instance třídy (objekt), 'root' = hlavní okno Tkinter
+    # ============================================================
+    # INICIALIZACE - SPOUŠTĚCÍ METODA
+    # ============================================================
+    # Voláno: jednoho v programu při vytvoření instance
+    # Zadání: setup GUI + inicializace proměnných
+    # 
+    # STRUKTURA GUI (jak se okno skládá):
+    # ┌─────────────────────────────────────────┐
+    # │            Label (AHOJ na vrchu)        │
+    # ├─────────────────┬───────────────────────┤
+    # │                 │                       │
+    # │   LEVÝ PANEL    │   PRAVÝ PANEL         │
+    # │   (Chat)        │   (Historie)          │
+    # │                 │                       │
+    # │  [ChatArea]     │   [ListBox s      ]   │
+    # │  [InputField]   │    historií]      │   │
+    # │  [Tlačítka]     │                   │   │
+    # │  [QuickBtns]    │                   │   │
+    # └─────────────────┴───────────────────────┘
+    # ============================================================
     def __init__(self, root):
-        self.root = root  # Uložení reference na hlavní okno pro pozdější přístup
-        self.root.title("Jednoduchý Chatbot")  # Nastavení titulku okna
-        self.root.geometry("800x500")  # Nastavení rozměrů: šířka 800 pixelů, výška 500 pixelů
+        # === PŘÍPRAVA OKNA ===
+        self.root = root
+        self.root.title("Jednoduchý Chatbot 🤖")
+        self.root.geometry("1000x600")  # Rozměry okna (šířka × výška)
 
-        # Vytvoření hlavního štítku s uvítáním
-        self.label = tk.Label(root, text="Ahoj! Napiš příkaz nebo zprávu:")
+        # === HLAVNÍ LAYOUT ===
+        # Label na vrchu
+        self.label = tk.Label(root, text="🤖 Ahoj! Napiš příkaz nebo zprávu:", font=("Arial", 12, "bold"))
         self.label.pack(pady=10)
 
-        # Hlavní rámeček pro layout chatu + boční panel
+        # Rozdělení okna na levý (chat) a pravý (historie) panel
         main_frame = tk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Levý panel: chat
+        # === LEVÝ PANEL: CHAT ===
+        # Obsahuje: text area (chat), vstupní pole, tlačítka
         left_frame = tk.Frame(main_frame)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Pravý panel: seznam všech chatů / historie
-        right_frame = tk.Frame(main_frame, width=200)
+        # === PRAVÝ PANEL: HISTORIE ===
+        # Obsahuje: listbox se všemi zprávami
+        right_frame = tk.Frame(main_frame, width=200, bg="#f0f0f0")
         right_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
 
-        tk.Label(right_frame, text="Seznam chatů:").pack(anchor=tk.NW)
+        # ═══════════════════════════════════════════════════════════
+        # PRAVÝ PANEL: SEZNAM CHATŮ (LISTBOX)
+        # ═══════════════════════════════════════════════════════════
+        tk.Label(right_frame, text="📋 Historie:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor=tk.NW)
         listbox_frame = tk.Frame(right_frame)
         listbox_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.chat_listbox = tk.Listbox(listbox_frame)
+        # Listbox = seznam prvků (každá zpráva z chatu)
+        self.chat_listbox = tk.Listbox(listbox_frame, font=("Arial", 9))
         self.chat_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # Scrollbar pro listbox (vertikální skrolování)
         listbox_scrollbar = tk.Scrollbar(listbox_frame, command=self.chat_listbox.yview)
         listbox_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.chat_listbox.configure(yscrollcommand=listbox_scrollbar.set)
+        # Event: když uživatel kliká na položku v listboxu, zobrazit ji v input field
         self.chat_listbox.bind('<<ListboxSelect>>', self.select_chat)
 
-        # Přidání podpory historie příkazů pro klávesy ↑ / ↓
-        self.command_history = []
-        self.history_index = 0
-        # Historie výsledků kalkulačky
-        self.calc_history = []
+        # ═══════════════════════════════════════════════════════════
+        # INICIALIZACE PROMĚNNÝCH
+        # ═══════════════════════════════════════════════════════════
+        # === HISTORIE PŘÍKAZŮ ===
+        # Umožňuje navigaci přes šipky nahoru/dolů (↑/↓)
+        self.command_history = []        # Seznam všech příkazů, které uživatel zadal
+        self.history_index = 0           # Ukazatel na aktuální pozici v historii
 
-        # ====== UŽIVATELSKÁ NASTAVENÍ ======
-        # Výchozí hodnoty: tmavý režim, velikost fontu, barva pozadí, jazyk
+        # === KALKULÁTOR ===
+        # Zaznamenává všechny matematické výpočty
+        self.calc_history = []           # Např: ["2+3 = 5", "10*2 = 20"]
+
+        # ═══════════════════════════════════════════════════════════
+        # UŽIVATELSKÁ NASTAVENÍ
+        # ═══════════════════════════════════════════════════════════
+        # Slovník pro uchovávání preferencí uživatele
+        # Tyto hodnoty lze měnit v open_settings() okně
         self.settings = {
-            "dark_mode": False,           # False = světlý režim, True = tmavý režim
-            "font_size": 10,              # Velikost fontu v pixelech (defaultně 10)
-            "language": "CZ",             # "CZ" = čeština, "EN" = angličtina
-            "bg_color": "white",          # Barva pozadí chatu
+            "dark_mode": False,           # Tmavý režim (True = tmavý, False = světlý)
+            "font_size": 10,              # Velikost fontu v pixelech
+            "language": "CZ",             # Jazyk (CZ = čeština, EN = angličtina)
+            "bg_color": "white",          # Barva pozadí
             "fg_color": "black",          # Barva textu
-            "auto_save": True,            # Automatické ukládání chatu
-            "notifications": True,        # Povolení notifikací
-            "font_family": "Arial"        # Font pro display
+            "auto_save": True,            # Automaticky ukládat chat
+            "notifications": True,        # Zobrazovat upozornění
+            "font_family": "Arial"        # Typ fontu
         }
 
-        # Hlavní chatové okno (Text widget) s vertikálním scrollbarem
+        # ═══════════════════════════════════════════════════════════
+        # LEVÝ PANEL: CHAT AREA
+        # ═══════════════════════════════════════════════════════════
+        # Rámeček pro chat (text area + scrollbar)
         chat_text_frame = tk.Frame(left_frame)
         chat_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.chat_history = tk.Text(chat_text_frame, state=tk.DISABLED, wrap=tk.WORD, fg="black")
+        # === TEXT AREA (CHAT DISPLAY) ===
+        # state=tk.DISABLED = uživatel NEMŮŽE editovat (jen čtení)
+        # wrap=tk.WORD = automatické zalamování slov
+        # fg="black" = barva textu
+        self.chat_history = tk.Text(
+            chat_text_frame, 
+            state=tk.DISABLED,     # Ochrana proti editaci (jen pro čtení)
+            wrap=tk.WORD,          # Zalamování dlouhých řádků
+            fg="black",
+            bg="white",
+            font=("Arial", 10)
+        )
         self.chat_history.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # === SCROLLBAR PRO CHAT AREA ===
         self.chat_scrollbar = tk.Scrollbar(chat_text_frame, command=self.chat_history.yview)
         self.chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.chat_history.configure(yscrollcommand=self.chat_scrollbar.set)
 
-        # Nastavení barev pro text
-        self.chat_history.tag_configure("user", foreground="black", background="white")
-        self.chat_history.tag_configure("bot", foreground="black", background="white")
+        # === TAGY PRO STYLIZACI TEXTU ===
+        # Tagy umožňují různé styly pro různé typy textů
+        # "user" = zprávy od uživatele (zvýšení)
+        # "bot" = odpovědi bota (normální)
+        self.chat_history.tag_configure("user", foreground="blue", font=("Arial", 10, "bold"))
+        self.chat_history.tag_configure("bot", foreground="black", font=("Arial", 10))
 
-        # Vstupní pole pro chat
-        self.chat_entry = tk.Entry(left_frame, bg="white", fg="green")
-        self.chat_entry.pack(fill=tk.X, pady=5)
-        self.chat_entry.bind("<Return>", lambda event: self.process_chat())
-        self.chat_entry.bind("<Up>", self.navigate_history_up)
-        self.chat_entry.bind("<Down>", self.navigate_history_down)
-        self.chat_entry.bind("<Return>", lambda event: self.process_chat())
+        # === VSTUPNÍ POLE (ENTRY) ===
+        # Kde uživatel píše své příkazy/zprávy
+        self.chat_entry = tk.Entry(left_frame, bg="white", fg="green", font=("Arial", 11))
+        self.chat_entry.pack(fill=tk.X, pady=5, padx=5)
+        # Event bindování (co se stane, když uživatel něco udělá):
+        self.chat_entry.bind("<Return>", lambda event: self.process_chat())  # Enter = odeslat
+        self.chat_entry.bind("<Up>", self.navigate_history_up)               # ↑ = starší příkaz
+        self.chat_entry.bind("<Down>", self.navigate_history_down)           # ↓ = novější příkaz
 
+        # ═══════════════════════════════════════════════════════════
+        # TLAČÍTKA (ACTIONABLE BUTTONS)
+        # ═══════════════════════════════════════════════════════════
+        # === ŘADA 1: HLAVNÍ TLAČÍTKA ===
         button_frame = tk.Frame(left_frame)
-        button_frame.pack(pady=(0, 10))
-        tk.Button(button_frame, text="Odeslat", command=self.process_chat).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Uložit chat", command=self.save_chat).pack(side=tk.LEFT, padx=5)
+        button_frame.pack(pady=(0, 10), padx=5, fill=tk.X)
+        tk.Button(button_frame, text="✉️ Odeslat", command=self.process_chat, bg="green", fg="white").pack(side=tk.LEFT, padx=2)
+        tk.Button(button_frame, text="💾 Uložit chat", command=self.save_chat, bg="blue", fg="white").pack(side=tk.LEFT, padx=2)
 
+        # === ŘADA 2: RYCHLÉ FUNKCE ===
         quick_frame = tk.Frame(left_frame)
-        quick_frame.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(quick_frame, text="Rychlé funkce:").pack(anchor=tk.W)
+        quick_frame.pack(fill=tk.X, pady=(0, 5), padx=5)
+        tk.Label(quick_frame, text="⚡ Rychlé funkce:", font=("Arial", 10, "bold")).pack(anchor=tk.W)
+        
         quick_buttons = tk.Frame(quick_frame)
         quick_buttons.pack(fill=tk.X)
-        tk.Button(quick_buttons, text="Vtip", command=self.joke_generator).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="BMI", command=self.bmi_calculator).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Převod", command=self.unit_converter).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Video", command=self.video_converter).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Poznámky", command=self.note_pad).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Nálada", command=self.mood_chat).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Matika", command=self.math_help).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Citát", command=self.quote_of_day).pack(side=tk.LEFT, padx=2, pady=2)
-        # Nové funkce pro webovou integraci: počasí a webové hledání
-        # Tlačítka otevřou dodatečná okna nebo přímo prohlížeč.
-        tk.Button(quick_buttons, text="Počasí", command=self.open_weather_window).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Vyhledat", command=self.open_search_window).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Calc historie", command=self.display_calc_history).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="TTT", command=self.tic_tac_toe).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="Recept", command=self.recipe_generator).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="⚙️ Nastavení", command=self.open_settings).pack(side=tk.LEFT, padx=2, pady=2)
-        tk.Button(quick_buttons, text="🎰 0/1", command=self.coin_flip_game).pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Grid tlačítek (2 řady × 8 sloupců)
+        # Řada 1:
+        tk.Button(quick_buttons, text="😂 Vtip", command=self.joke_generator, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="⚖️ BMI", command=self.bmi_calculator, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="🔄 Převod", command=self.unit_converter, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="🎬 Video", command=self.video_converter, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="📝 Poznámky", command=self.note_pad, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="😌 Nálada", command=self.mood_chat, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="🧮 Matika", command=self.math_help, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons, text="💬 Citát", command=self.quote_of_day, width=8).pack(side=tk.LEFT, padx=1, pady=2)
 
-        # Základní nápověda pro příkazy
-        self.append_chat("Bot: Ahoj! Můžu pomoci se všemi programy. Seznam příkazů:")
-        self.append_chat("- help, help all, help chat, clear, history, calc history, ask, weather, search, ahoj, jak se máš, calc, unit, pass, joke, time, quote, nick, currency, bmi, rps, temp, dice, age, fact, words, morse, reverse, tictactoe, recipe, mood, math, exit")
-        self.append_chat("📚 Detailní průvodce všech funkcí najdeš v souboru: FUNKCNI_PRUVODCE.md")
+        # Řada 2:
+        quick_buttons2 = tk.Frame(quick_frame)
+        quick_buttons2.pack(fill=tk.X)
+        tk.Button(quick_buttons2, text="🌤️ Počasí", command=self.open_weather_window, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="🔍 Hledání", command=self.open_search_window, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="📊 Historia", command=self.display_calc_history, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="❌⭕ TTT", command=self.tic_tac_toe, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="🍡 Recept", command=self.recipe_generator, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="⚙️ Nastave", command=self.open_settings, width=8).pack(side=tk.LEFT, padx=1, pady=2)
+        tk.Button(quick_buttons2, text="🎰 0/1", command=self.coin_flip_game, width=8).pack(side=tk.LEFT, padx=1, pady=2)
 
-        # Při startu načteme poslední chat (pokud existuje) pro lepší plynulost práce
+        # ═══════════════════════════════════════════════════════════
+        # INICIÁLNÍ ZPRÁVY
+        # ═══════════════════════════════════════════════════════════
+        self.append_chat("🤖 Bot: Ahoj! Jsem chatbot. Co bych pro tebe mohl udělat?")
+        self.append_chat("📋 Příkazy: help, calc, unit, weather, search, ai, bmi, rps, tictactoe, coin, exit...")
+        self.append_chat("📚 Úplný seznam: napiš 'help' nebo si přečti FUNKCNI_PRUVODCE.md")
+
+        # ═══════════════════════════════════════════════════════════
+        # NAČTENÍ POSLEDNÍ KONVERZACE
+        # ═══════════════════════════════════════════════════════════
+        # Pokud existuje uložený chat, načteme ho pro kontinuitu
         if os.path.exists("chat_log.txt"):
             try:
                 with open("chat_log.txt", "r", encoding="utf-8") as f:
                     lines = f.read().splitlines()
                 if lines:
-                    self.append_chat("Bot: Načítám poslední chat...")
-                    for line in lines:
+                    self.append_chat("\n📂 Bot: Obnovuji poslední konverzaci...")
+                    for line in lines[-20:]:  # Poslední 20 řádků (ne všechno)
                         self.append_chat(line)
-            except Exception:
-                self.append_chat("Bot: Nelze načíst uložený chat; pokračujeme s prázdným chatem.")
-
-        # Podpora přepnutí do převodníků a her přes chat:
-        # math, unit, pass, joke, time, quote, nick, note, currency, bmi, rps, temp, dice, age, fact, words, morse
+            except Exception as e:
+                self.append_chat(f"⚠️ Bot: Nemohl jsem načíst chat: {e}")
 
     # Metoda pro povídání o náladě - otevře nové okno pro zadání nálady
     def mood_chat(self):
@@ -444,48 +525,115 @@ class ChatbotApp:
         response = self.handle_command(user_text)
         self.append_chat("Bot: " + response)
 
-    # Pomocná metoda pro kontrolu, zda text obsahuje některý ze zadaných klíčů
-    # Vrací True/False; používá se pro rozpoznávání příkazů v chatovém textu
-    # Příklad: self._has("jak se máš", "jak se", "co u tebe") vrátí True
+    # ============================================================
+    # POMOCNÉ METODY PRO ROZPOZNÁVÁNÍ PŘÍKAZŮ
+    # ============================================================
+    # _has() a _starts() jsou klíčové pro pattern matching v textových příkazech
+    
+    # Metoda 1: Kontrola, zda text obsahuje kterýkoliv z klíčů
+    # Vrací: True/False (logická hodnota)
+    # Příklady:
+    #   self._has("jak se máš", "jak se", "co u") → True (obsahuje "jak se")
+    #   self._has("ahoj", "čau", "nazdar", "zdar") → False
+    #   self._has("mohu si to koupit", "koupit", "koupi", "nákup") → True (obsahuje "koupit")
+    # Použití: Flexibilní rozpoznávání frází a přirozené řeči
     def _has(self, text, *keys):
+        # any() = vrátí True pokud alespoň JEDEN prvek ze seznamu je True
+        # key in text = podúhled - je "key" součástí "text"?
+        # for key in keys = iterace přes všechny klíče (jednoduché i složené příkazy)
         return any(key in text for key in keys)
 
-    # Pomocná metoda pro kontrolu, zda text začíná některým ze zadaných prefixů
-    # Vrací True/False; používá se pro příkazy, které vyžadují argumenty (např. "calc 2+2")
-    # Příklad: self._starts("calc 5*3", "calc ", "math ") vrátí True
+    # Metoda 2: Kontrola, zda text ZAČÍNÁ kterýmkoliv z prefixů
+    # Vrací: True/False
+    # Příklady:
+    #   self._starts("calc 2+2", "calc ", "math ") → True (začína "calc ")
+    #   self._starts("unit 100 m cm", "unit ", "convert ") → True (začína "unit ")
+    #   self._starts("ahoj", "calc ", "unit ") → False
+    # Použití: Příkazy s parametry - oddělení příkazu od dat
+    # Různé varianty: "calc", "math", "= ", "⇌"
     def _starts(self, text, *prefixes):
+        # any() = True pokud alespoň jeden prefix se shoduje
+        # text.startswith(prefix) = začíná text daným prefixem?
         return any(text.startswith(prefix) for prefix in prefixes)
 
-    # Bezpečně vyhodnotí matematický výraz pomocí AST (Abstract Syntax Tree)
-    # BEZPEČNOST: Zabraňuje spuštění nebezpečného kódu tím, že:
-    #            1. Parsuje výraz na AST (stromová struktura, ne spustitelný kód)
-    #            2. Ověřuje, že obsahuje jen bezpečné operace (sčítání, násobení atd.)
-    #            3. Zakazuje volání funkcí (ast.Call) a access k built-in modulům
-    #            4. Vyhodnocuje s prázdným prostředím {{"__builtins__": None}}
-    # PŘÍKLAD: "2+3*4" -> OK; "__import__('os').system()" -> ODMÍTNUTO
+    # ============================================================
+    # BEZPEČNÁ MATEMATICKÁ EVALUACE - Zbraň proti útokům
+    # ============================================================
+    # Proč AST a ne eval()? eval("__import__('os').system('rm -rf /')") = KATASTROFA!
+    # 
+    # NEBEZPEČNÉ (NESMÍ SE POUŽÍVAT):
+    #   eval("2+3") ✓ OK (funguje)
+    #   eval("__import__('os').remove('important_file.txt')") ✗ NEBEZPEČNÉ!
+    #   eval("exec('for i in range(999999): pass')") ✗ Infinite loop
+    #   eval("open('secret.txt').read()") ✗ Čte veškeré soubory
+    #
+    # ŘEŠENÍ - AST (Abstract Syntax Tree):
+    #   1. Parsujeme výraz na abstraktní strom (ne spuštění!)
+    #   2. Zkoušíme pouze bezpečné operace (sčítání, násobení, etc.)
+    #   3. Zakazujeme: volání funkcí, přístup k proměnným, import
+    #   4. Vyhodnocujeme v "jail" prostředí bez built-in funkcí
     def safe_eval_math(self, expr):
-        # Parsování textu na AST - nejedná se o spuštění, jen analýza
-        expression = ast.parse(expr, mode="eval")
-        # Seznam povolených typů uzlů: binární operace (+,-,*,/), unární (-+), konstanty
+        # === KROK 1: PARSOVÁNÍ NA AST (bez spuštění) ===
+        # ast.parse() = analýza textu, BEZ SPUŠTĚNÍ
+        # mode="eval" = parsuj jako výraz (vrátí ast.Expression, ne statements)
+        try:
+            expression = ast.parse(expr, mode="eval")
+        except SyntaxError:
+            raise ValueError("Syntaktická chyba v matematickém výrazu")
+
+        # === KROK 2: DEFINICE BEZPEČNÝCH TYPŮ ===
+        # Povolujeme POUZE matematické operace:
+        # - ast.BinOp: binární operace (+, -, *, /, //, %, **)
+        # - ast.UnaryOp: unární operace (-, +)
+        # - ast.Constant: čísla (1, 2.5, 3+4j)
+        # - ast.Add, ast.Sub, etc.: typy operátorů
         allowed_nodes = (
-            ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant, ast.Num,
-            ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
-            ast.UAdd, ast.USub, ast.FloorDiv, ast.LShift, ast.RShift,
-            ast.Load,
+            ast.Expression,    # Hlavní kontejner výrazu
+            ast.BinOp,        # Binární operace: a + b, a * b, atd.
+            ast.UnaryOp,      # Unární operace: -a, +a
+            ast.Constant,     # Konstanta: čísla
+            ast.Num,          # Starší Python kompatibilita
+            ast.Add,          # Operator +
+            ast.Sub,          # Operator -
+            ast.Mult,         # Operator *
+            ast.Div,          # Operator /
+            ast.Pow,          # Operator ** (mocnina)
+            ast.Mod,          # Operator % (zbytek po dělení)
+            ast.UAdd,         # Unární +
+            ast.USub,         # Unární -
+            ast.FloorDiv,     # Operator // (celočíselné dělení)
+            ast.LShift,       # Bitwise << (levý shift)
+            ast.RShift,       # Bitwise >> (pravý shift)
+            ast.Load,         # Načítání hodnoty (interní)
         )
-        # Procházení všech uzlů v AST stromu - ověření bezpečnosti
+
+        # === KROK 3: VALIDACE STROMU ===
+        # Procházíme všechny uzly a zabezpečujeme je
         for node in ast.walk(expression):
-            # Zastavit jakékoliv volání funkcí (např. open(), exec(), etc.)
+            # BLOKACE: Volání funkcí - zabraňuje open(), exec(), __import__()
             if isinstance(node, ast.Call):
-                raise ValueError("Nepovolený výraz")
-            # Zastavit nekanonické konstanty (např. stringy, které by mohly obsahovat kód)
+                raise ValueError("⛔ Funkce nejsou povoleny! (Zabezpečení)")
+            
+            # BLOKACE: Podezřelé konstanty - stringu, seznamy, etc.
+            # Povolujeme POUZE čísla (int, float, complex)
             if isinstance(node, ast.Constant) and not isinstance(node.value, (int, float, complex)):
-                raise ValueError("Nepovolený výraz")
-            # Zastavit jakékoliv jiné nepovolené operace
+                raise ValueError(f"⛔ Typ {type(node.value).__name__} není povolen! (Zabezpečení)")
+            
+            # BLOKACE: Všechny ostatní operace mimo whitelist
             if not isinstance(node, allowed_nodes):
-                raise ValueError("Nepovolený výraz")
-        # Vyhodnocení bezpečného výrazu s vypnutými built-in funkcemi
-        return eval(compile(expression, "<string>", "eval"), {"__builtins__": None}, {})
+                raise ValueError(f"⛔ Operace {node.__class__.__name__} není povolena! (Zabezpečení)")
+
+        # === KROK 4: VYHODNOCENÍ V JAIL PROSTŘEDÍ ===
+        # compile() = kompiluje AST na bytecode
+        # eval() = vyhodnocuje bytecode
+        # {"__builtins__": None} = vypne všechny built-in funkce (žádné open, print, etc.)
+        # VÝSLEDEK: Bezpečné vyhodnocení, žádný přístup k souborům/modulům
+        result = eval(
+            compile(expression, "<string>", "eval"),
+            {"__builtins__": None},  # Vypnutí všech built-in funkcí
+            {}                        # Vypnutí všech lokálních proměnných
+        )
+        return result
 
     # Metoda pro vymazání celého chatu
     # Vymaže obsah textového pole chatu a také listbox s historií
@@ -631,23 +779,35 @@ class ChatbotApp:
 
         tk.Button(weather_window, text="Zjistit počasí", command=show_weather).pack(pady=10)
 
-    # Hlavní parser příkazů - analyzuje uživatelský vstup a vrátí odpověď
-    # Strategie: 1. Normalizuje text (malá písmena) -> 2. Hledá přesné shody v slovníku
-    #            3. Hledá příkazy s argumenty (např. "calc ...") -> 4. Vracejí text nebo vyvolávají okna
+    # ============================================================
+    # HLAVNÍ PARSER PŘÍKAZŮ - Jádro aplikace
+    # ============================================================
+    # Funkce: Přijímá text od uživatele a vrátí odpověď nebo spustí akci
+    # Strategie rozpoznávání:
+    #   1. Normalizace textu (lowercase, odebrání mezer)
+    #   2. Hledání v simple_responses slovníku (přesné shody)
+    #   3. Hledání phrase-based příkazů (pomocí self._has)
+    #   4. Hledání prefix-based příkazů s parametry (calc 2+3, unit 100 m cm...)
+    #   5. Výchozí odpověď "Neznámý příkaz. Napiš 'help'."
+    # ============================================================
     def handle_command(self, text):
-        # Normalizace textu na malá písmena a odebrání mezer na začátku/konci (jednodušší porovnání)
+        # === NORMALIZACE ===
+        # Převedení na malá písmena a odebrání mezer (uživatel může psát "HELP", "Help", " help " - všechno funguje)
         t = text.strip().lower()
         if not t:
             return ""
 
-        # Slovník jednoduchých odpovědí na přesné příkazy
-        # Klíče jsou příkazy (lowercase); hodnoty jsou lambda funkce (anonymní funkce)
-        # Proč lambda? Protože některé hodnoty potřebují volat funkce (clear_chat(), show_history())
-        # Bez lambda by se funkce zavolaly hned při vytváření slovníku, ne až během hledání odpovědi
-        # Příklady:
-        # - "help": lambda: (...) => vrátí seznam příkazů
-        # - "clear": lambda: self.clear_chat() => zavolá clear_chat() pouze když je "clear" zadán
-        # - "díky": lambda: "Není zač..." => vrátí statický text
+        # === SLOVNÍK JEDNODUCHÝCH ODPOVĚDÍ ===
+        # Mapuje příkaz → lambda funkce pro odpověď
+        # Proč lambda? Aby se funkce zavolaly teprve když je příkaz zadán, ne při vytváření slovníku
+        # PŘÍKLAD:
+        #   "help": lambda: (...return text...) → vrátí seznam příkazů
+        #   "clear": lambda: self.clear_chat() → zavolá metodu pouze na "clear"
+        #   "quote": lambda: self.get_random_quote() → generuje citát až když je "quote" zadán
+        #
+        # ALTERNATIVA (ŠPATNĚ):
+        #   "clear": self.clear_chat() → zavolá se HNED při vytváření slovníku (chyba!)
+        #   "quote": self.get_random_quote() → zavolá se HNED (chyba!)
         simple_responses = {
             "help": lambda: (
                 "Příkazy: help, help all, help chat, ahoj, jak se máš, co umíš, děkuji, calc, unit, pass, joke, "
@@ -912,11 +1072,31 @@ class ChatbotApp:
         # Uživateli se doporučuje zadat "help" pro seznam všech dostupných příkazů
         return "Neznámý příkaz. Napiš 'help'."
 
+    # ============================================================
+    # OTEVÍRÁNÍ NOVÝCH OKEN (TOPLEVEL)
+    # ============================================================
+    # Co je Toplevel okno?
+    #   - Nové NEZÁVISLÉ okno, které se objeví nad hlavním oknem
+    #   - Uživatel může pracovat v obou oknech najednou (unlike modal dialogs)
+    #   - Využívá se pro: hry, kalkulačky, nastavení, formuláře, etc.
+    #
+    # PŘÍKLAD SPRÁVNĚ:
+    #   game_window = tk.Toplevel(self.root)        # Vytvoř nové okno
+    #   tk.Button(..., command=lambda: play(0))    # Lambda s parametrem
+    #   game_window.destroy()                      # Uzavři okno po hře
+    #
+    # CHYBA KTERÁ SE DĚLÁ OBVYKLE:
+    #   tk.Button(..., command=play(0))            # ŠPATNĚ! Zavolá se hned!
+    #   Proč?: play(0) se spouští při vytváření tlačítka, ne při kliknutí
+    #   Řešení: tk.Button(..., command=lambda: play(0))  # SPRÁVNĚ!
+    # ============================================================
+
     # Metoda pro pomoc s matematikou - jednoduchá kalkulačka
     def math_help(self):
         # Vytvoření nového okna (Toplevel) pro matematické výpočty
+        # Toplevel = nové okno, které se objeví nezávisle na hlavním okně
         math_window = tk.Toplevel(self.root)
-        math_window.title("Pomoc s matematikou")
+        math_window.title("🧮 Pomoc s matematikou")
         math_window.geometry("300x200")
 
         tk.Label(math_window, text="Zadej první číslo:").pack()
@@ -1827,13 +2007,59 @@ class ChatbotApp:
     def quit_app(self):
         self.root.quit()  # Ukončení hlavní smyčky Tkinter aplikace
 
- 
-# Hlavní blok pro spuštění aplikace
+
+# ============================================================
+# HLAVNÍ BLOK - SPUŠTĚNÍ APLIKACE
+# ============================================================
+# Jak aplikace funguje:
+# 1. __name__ == "__main__" → Skript běží přímo (Python skript.py)
+# 2. tk.Tk() → Vytvoří hlavní okno
+# 3. ChatbotApp(root) → Inicializuje GUI a logiku
+# 4. root.mainloop() → Spustí event loop (čeká na uživatelské kliknutí/klávesy)
+#
+# EVENT LOOP (root.mainloop()):
+#   - Běží nekonečně a čeká na eventy (kliknutí, stisky kláves, etc.)
+#   - Když uživatel učiní akci:
+#     1. Event se spustí (např. button click)
+#     2. Zavolá se příslušný command/callback
+#     3. Aplikace zpracuje akci
+#     4. Znovu čeká na další event
+#   - Aplikace se uzavře, když uživatel uzavře okno nebo zavolá quit()
+#
+# ARCHITEKTURA:
+#   ┌─────────────────────────────────┐
+#   │       MAIN WINDOW (root)         │
+#   │  ┌──────────────────────────┐    │
+#   │  │    ChatbotApp Instance    │   │
+#   │  │  Atributy:                │   │
+#   │  │  - self.root              │   │
+#   │  │  - self.chat_history      │   │
+#   │  │  - self.settings          │   │
+#   │  │  - self.board (TTT)       │   │
+#   │  │  Metody:                  │   │
+#   │  │  - __init__()             │   │
+#   │  │  - handle_command()       │   │
+#   │  │  - process_chat()         │   │
+#   │  │  - [40+ game/tool methods]│   │
+#   │  └──────────────────────────┘    │
+#   └─────────────────────────────────┘
+# ============================================================
 if __name__ == "__main__":
-    # __name__ == "__main__" znamená, že skript běží přímo (ne importován z jiného souboru)
-    # Vytvoření instance hlavního okna Tkinter aplikace
-    root = tk.Tk()  # tk.Tk() = vytvoří hlavní okno aplikace
-    # Inicializace instance ChatbotApp s předáním hlavního okna
-    app = ChatbotApp(root)  # Vytvoří objekt ChatbotApp a nastaví všechna tlačítka
-    # Spuštění hlavní smyčky aplikace - čeká na události a udržuje okno otevřené
-    root.mainloop()  # Spustí event loop, který čeká na uživatelské akce
+    # === PŘÍPRAVA OKNA ===
+    # Vytvoření hlavního okna Tkinter
+    root = tk.Tk()
+    
+    # === INICIALIZACE APLIKACE ===
+    # Vytvoření instance ChatbotApp, která:
+    # - Nastaví GUI (tlačítka, textová pole, etc.)
+    # - Inicializuje proměnné (settings, history, board, etc.)
+    # - Nastaví event handlery (co se stane po kliknutí)
+    app = ChatbotApp(root)
+    
+    # === SPUŠTĚNÍ EVENT LOOP ===
+    # Hlavní smyčka aplikace - čeká na eventy a udržuje okno otevřené
+    # Program běží zde, dokud uživatel neuzavře okno
+    root.mainloop()
+    
+    # POZNÁMKA: Kód zde se nikdy nespustí, pokud je program běžný!
+    # (root.mainloop() běží, dokud uživatel nezavře okno)

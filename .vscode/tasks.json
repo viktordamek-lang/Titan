@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Format code reference",
+			"type": "shell",
+			"command": "echo 'Organizace: Inicializace → Nastavení → Chat → Pomocné metody → AI/Chat → Web → Hry → Kalkulačky → Generátory → Nástroje → Multimedia → Utility' && echo 'Startuji reorganizaci...'",
+			"group": "build"
+		}
+	]
+}
